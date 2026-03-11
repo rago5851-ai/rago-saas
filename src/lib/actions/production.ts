@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { cookies } from "next/headers"
 
 export async function getWorkOrders() {
   try {
@@ -30,8 +31,13 @@ export async function createWorkOrder(formulaId: string, targetVolumeLiters: num
       return { success: false, error: "Datos de orden inválidos." }
     }
 
+    const cookieStore = await cookies()
+    const authCookie = cookieStore.get('auth_token')
+    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+
     const order = await prisma.workOrder.create({
       data: {
+        userId: authCookie.value,
         formulaId,
         targetVolumeLiters,
         status: "PENDING"

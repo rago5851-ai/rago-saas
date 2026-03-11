@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { cookies } from "next/headers"
 
 export async function getRawMaterials() {
   try {
@@ -31,8 +32,15 @@ export async function createRawMaterial(formData: FormData) {
       return { success: false, error: "Por favor revisa que todos los campos numéricos sean válidos." }
     }
 
+    const cookieStore = await cookies()
+    const authCookie = cookieStore.get('auth_token')
+    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+
     const newMaterial = await prisma.rawMaterial.create({
-      data
+      data: {
+        ...data,
+        userId: authCookie.value
+      }
     })
 
     revalidatePath("/inventory")

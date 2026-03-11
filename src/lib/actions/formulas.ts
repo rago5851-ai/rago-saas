@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { cookies } from "next/headers"
 
 export async function getFormulas() {
   try {
@@ -37,8 +38,13 @@ export async function createFormula(
       return { success: false, error: "La fórmula debe tener un nombre y al menos un ingrediente." }
     }
 
+    const cookieStore = await cookies()
+    const authCookie = cookieStore.get('auth_token')
+    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+
     const newFormula = await prisma.formula.create({
       data: {
+        userId: authCookie.value,
         name,
         instructions,
         FormulaIngredients: {
