@@ -56,3 +56,37 @@ export async function logoutAction(formData?: FormData) {
   cookieStore.delete('auth_token')
 }
 
+export async function registerAction(formData: FormData) {
+  const email = formData.get("email")?.toString()
+  const password = formData.get("password")?.toString()
+
+  if (!email || !password) return { success: false, error: "Faltan credenciales" }
+
+  try {
+    const existingUser = await prisma.user.findUnique({ where: { email } })
+    if (existingUser) return { success: false, error: "El correo ya está registrado" }
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+    const newUser = await prisma.user.create({
+      data: {
+        email,
+        passwordHash: hashedPassword,
+        role: "CUSTOMER" // Or whatever default makes sense
+      }
+    })
+
+    const cookieStore = await cookies()
+    cookieStore.set('auth_token', newUser.id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 30, // 30 dias de persistencia
+      path: "/",
+    })
+    
+    return { success: true, role: newUser.role }
+  } catch(error) {
+    console.error("Register Error:", error)
+    return { success: false, error: "Error interno del servidor" }
+  }
+}
+

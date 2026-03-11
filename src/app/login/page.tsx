@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { loginAction } from "@/lib/actions/auth"
+import { loginAction, registerAction } from "@/lib/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Lock, User } from "lucide-react"
@@ -11,16 +11,18 @@ export default function LoginPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [isRegister, setIsRegister] = useState(false)
 
-  async function handleLogin(formData: FormData) {
+  async function handleAuth(formData: FormData) {
     setLoading(true)
     setError(null)
-    const res = await loginAction(formData)
+    const action = isRegister ? registerAction : loginAction
+    const res = await action(formData)
     if (res.success) {
       router.push("/inventory")
       router.refresh()
     } else {
-      setError(res.error || "Credenciales incorrectas")
+      setError(res.error || (isRegister ? "Error al registrarse" : "Credenciales incorrectas"))
       setLoading(false)
     }
   }
@@ -41,7 +43,7 @@ export default function LoginPage() {
           </div>
         </div>
         
-        <form action={handleLogin} className="p-6 space-y-5 bg-gray-50/50">
+        <form action={handleAuth} className="p-6 space-y-5 bg-gray-50/50">
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm font-bold text-center border border-red-100 shadow-sm">
               {error}
@@ -82,8 +84,18 @@ export default function LoginPage() {
               disabled={loading} 
               className="w-full h-14 text-lg font-black text-white bg-indigo-700 hover:bg-indigo-800 rounded-xl shadow-lg transition-transform active:scale-95"
             >
-              {loading ? "Entrando..." : "Iniciar Sesión"}
+              {loading ? "Procesando..." : (isRegister ? "Crear Cuenta" : "Iniciar Sesión")}
             </Button>
+            
+            <div className="text-center mt-4">
+              <button 
+                type="button" 
+                onClick={() => setIsRegister(!isRegister)}
+                className="text-sm font-bold text-indigo-600 hover:underline"
+              >
+                {isRegister ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate"}
+              </button>
+            </div>
           </div>
         </form>
       </div>
