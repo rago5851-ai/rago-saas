@@ -38,7 +38,7 @@ export default function NewFormulaPage() {
 
   useEffect(() => {
     getRawMaterials().then(res => {
-      if (res.success && res.data) setMaterials(res.data)
+      if (res.success && res.data) setMaterials(res.data as any)
     })
   }, [])
 

@@ -25,7 +25,7 @@ export default function WorkOrderDetailPage() {
   useEffect(() => {
     getWorkOrders().then(res => {
       if (res.success && res.data) {
-        const found = res.data.find((o: any) => o.id === id)
+        const found = res.data.find((o: any) => o.id === id) as any
         if (found) {
           setOrder(found)
           setObservations(found.observations || "")

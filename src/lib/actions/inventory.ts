@@ -1,14 +1,25 @@
 "use server"
 
-import prisma from "@/lib/prisma"
+import { db } from "@/lib/firebase"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 
 export async function getRawMaterials() {
   try {
-    const materials = await prisma.rawMaterial.findMany({
-      orderBy: { name: "asc" }
-    })
+    const cookieStore = await cookies()
+    const authCookie = cookieStore.get('auth_token')
+    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+
+    const snapshot = await db.collection("rawMaterials")
+                             .where("userId", "==", authCookie.value)
+                             .orderBy("name", "asc")
+                             .get()
+
+    const materials = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+
     return { success: true, data: materials }
   } catch (error) {
     console.error("Error fetching materials:", error)
@@ -26,6 +37,8 @@ export async function createRawMaterial(formData: FormData) {
       concentrationPercent: roundTo3(parseFloat(formData.get("concentrationPercent") as string)),
       densityKgL: roundTo3(parseFloat(formData.get("densityKgL") as string)),
       pricePerKg: roundTo3(parseFloat(formData.get("pricePerKg") as string)),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }
 
     if (!data.name || isNaN(data.stockKg) || isNaN(data.densityKgL) || isNaN(data.pricePerKg)) {
@@ -36,15 +49,13 @@ export async function createRawMaterial(formData: FormData) {
     const authCookie = cookieStore.get('auth_token')
     if (!authCookie?.value) return { success: false, error: "No autorizado" }
 
-    const newMaterial = await prisma.rawMaterial.create({
-      data: {
-        ...data,
-        userId: authCookie.value
-      }
+    const docRef = await db.collection("rawMaterials").add({
+      ...data,
+      userId: authCookie.value
     })
 
     revalidatePath("/inventory")
-    return { success: true, data: newMaterial }
+    return { success: true, data: { id: docRef.id, ...data, userId: authCookie.value } }
   } catch (error) {
     console.error("Error creating material:", error)
     return { success: false, error: "Hubo un error al guardar el insumo" }
@@ -53,9 +64,9 @@ export async function createRawMaterial(formData: FormData) {
 
 export async function updateRawMaterialStock(id: string, newStock: number) {
   try {
-    await prisma.rawMaterial.update({
-      where: { id },
-      data: { stockKg: newStock }
+    await db.collection("rawMaterials").doc(id).update({
+      stockKg: newStock,
+      updatedAt: new Date(),
     })
     revalidatePath("/inventory")
     return { success: true }
@@ -66,11 +77,11 @@ export async function updateRawMaterialStock(id: string, newStock: number) {
 
 export async function deleteRawMaterial(id: string) {
   try {
-    await prisma.rawMaterial.delete({ where: { id } })
+    await db.collection("rawMaterials").doc(id).delete()
     revalidatePath("/inventory")
     return { success: true }
   } catch (error) {
-    return { success: false, error: "No se pudo eliminar el insumo (puede estar en uso)." }
+    return { success: false, error: "No se pudo eliminar el insumo." }
   }
 }
 
@@ -85,16 +96,14 @@ export async function updateRawMaterialFromForm(formData: FormData) {
       concentrationPercent: roundTo3(parseFloat(formData.get("concentrationPercent") as string)),
       densityKgL: roundTo3(parseFloat(formData.get("densityKgL") as string)),
       pricePerKg: roundTo3(parseFloat(formData.get("pricePerKg") as string)),
+      updatedAt: new Date(),
     }
 
     if (!id || !data.name || isNaN(data.stockKg) || isNaN(data.densityKgL) || isNaN(data.pricePerKg)) {
       return { success: false, error: "Revisa los campos numéricos y el ID." }
     }
 
-    await prisma.rawMaterial.update({
-      where: { id },
-      data
-    })
+    await db.collection("rawMaterials").doc(id).update(data)
 
     revalidatePath("/inventory")
     return { success: true }

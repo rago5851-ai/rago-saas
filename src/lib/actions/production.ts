@@ -1,23 +1,52 @@
 "use server"
 
-import prisma from "@/lib/prisma"
+import { db } from "@/lib/firebase"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 
 export async function getWorkOrders() {
   try {
-    const orders = await prisma.workOrder.findMany({
-      include: {
-        formula: {
-          include: {
-            FormulaIngredients: {
-              include: { rawMaterial: true }
-            }
-          }
-        }
-      },
-      orderBy: { createdAt: "desc" }
+    const cookieStore = await cookies()
+    const authCookie = cookieStore.get('auth_token')
+    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+
+    // 1. Obtener órdenes del usuario
+    const ordersSnapshot = await db.collection("workOrders")
+      .where("userId", "==", authCookie.value)
+      .orderBy("createdAt", "desc")
+      .get()
+
+    // 2. Para popular la fórmula e insumos, necesitamos buscarlos
+    // Esto se puede optimizar, pero por ahora obtenemos todo del user para cruzar en memoria.
+    const formulasSnapshot = await db.collection("formulas").where("userId", "==", authCookie.value).get()
+    const rawMaterialsSnapshot = await db.collection("rawMaterials").where("userId", "==", authCookie.value).get()
+    
+    const rawMaterialsMap = new Map()
+    rawMaterialsSnapshot.docs.forEach(doc => rawMaterialsMap.set(doc.id, { id: doc.id, ...doc.data() }))
+
+    const formulasMap = new Map()
+    formulasSnapshot.docs.forEach(doc => {
+      const data = doc.data()
+      formulasMap.set(doc.id, {
+        id: doc.id,
+        ...data,
+        FormulaIngredients: (data.ingredients || []).map((ing: any) => ({
+          rawMaterialId: ing.rawMaterialId,
+          quantityKg: ing.quantityKg,
+          rawMaterial: rawMaterialsMap.get(ing.rawMaterialId) || null
+        }))
+      })
     })
+
+    const orders = ordersSnapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        ...data,
+        formula: formulasMap.get(data.formulaId) || null
+      }
+    })
+
     return { success: true, data: orders }
   } catch (error) {
     console.error("Error fetching work orders:", error)
@@ -35,17 +64,19 @@ export async function createWorkOrder(formulaId: string, targetVolumeLiters: num
     const authCookie = cookieStore.get('auth_token')
     if (!authCookie?.value) return { success: false, error: "No autorizado" }
 
-    const order = await prisma.workOrder.create({
-      data: {
-        userId: authCookie.value,
-        formulaId,
-        targetVolumeLiters,
-        status: "PENDING"
-      }
-    })
+    const orderData = {
+      userId: authCookie.value,
+      formulaId,
+      targetVolumeLiters,
+      status: "PENDING",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const orderRef = await db.collection("workOrders").add(orderData)
 
     revalidatePath("/production")
-    return { success: true, data: order }
+    return { success: true, data: { id: orderRef.id, ...orderData } }
   } catch (error) {
     return { success: false, error: "Error al crear la orden de producción" }
   }
@@ -53,54 +84,77 @@ export async function createWorkOrder(formulaId: string, targetVolumeLiters: num
 
 export async function completeWorkOrder(orderId: string, observations: string = "") {
   try {
-    // 1. Obtener la orden y su fórmula con ingredientes
-    const order = await prisma.workOrder.findUnique({
-      where: { id: orderId },
-      include: {
-        formula: {
-          include: {
-            FormulaIngredients: {
-              include: { rawMaterial: true }
-            }
-          }
-        }
-      }
-    })
+    // 1. Obtener la orden
+    const orderDoc = await db.collection("workOrders").doc(orderId).get()
+    if (!orderDoc.exists) throw new Error("Orden no encontrada")
+    
+    const orderData = orderDoc.data()
+    if (orderData?.status === "FINISHED") throw new Error("La orden ya está finalizada")
 
-    if (!order) throw new Error("Orden no encontrada")
-    if (order.status === "FINISHED") throw new Error("La orden ya está finalizada")
+    // 2. Obtener fórmula y recalcular la escala
+    const formulaDoc = await db.collection("formulas").doc(orderData?.formulaId).get()
+    if (!formulaDoc.exists) throw new Error("Fórmula no encontrada")
+    
+    const formulaData = formulaDoc.data()
+    const ingredients = formulaData?.ingredients || []
 
-    // Calcular la escala de la receta original vs la pedida.
-    // Ej: Si la receta base daba 10L, y se piden 100L, escalar a 10x.
-    const baseLiters = order.formula.FormulaIngredients.reduce(
-      (sum: any, ing: any) => sum + (ing.quantityKg / ing.rawMaterial.densityKgL), 0
-    )
+    // Obtener información de los insumos implicados (para densidades)
+    const rawMaterialRefs = ingredients.map((ing: any) => db.collection("rawMaterials").doc(ing.rawMaterialId))
+    const rawMaterialDocs = rawMaterialRefs.length > 0 ? await db.getAll(...rawMaterialRefs) : []
+
+    let baseLiters = 0;
+    const stockUpdates: { ref: any, requiredKg: number, name: string }[] = []
+
+    for (let i = 0; i < ingredients.length; i++) {
+        const ing = ingredients[i]
+        const rmDoc = rawMaterialDocs.find(d => d.id === ing.rawMaterialId)
+        if (!rmDoc || !rmDoc.exists) throw new Error("Insumo no encontrado: " + ing.rawMaterialId)
+
+        const rmData = rmDoc.data()
+        baseLiters += (ing.quantityKg / rmData?.densityKgL)
+
+        // Preparamos los updates para la transacción
+        stockUpdates.push({
+            ref: rmDoc.ref,
+            requiredKg: 0, // se calcula tras tener el scaleFactor
+            name: rmData?.name || "Insumo desconocido"
+        })
+    }
     
     if (baseLiters === 0) throw new Error("Fórmula base inválida (Volumen 0L)")
-    const scaleFactor = order.targetVolumeLiters / baseLiters
+    const scaleFactor = orderData!.targetVolumeLiters / baseLiters
 
-    // 2. Transacción atómica: Actualizar stock de todos y marcar orden como finalizada
-    await prisma.$transaction(async (tx: any) => {
-      for (const ing of order.formula.FormulaIngredients) {
-        const requiredKg = ing.quantityKg * scaleFactor
-        
-        // Descontar inventario validando negativos si es necesario (se restringe en UI previo)
-        await tx.rawMaterial.update({
-          where: { id: ing.rawMaterialId },
-          data: {
-            stockKg: { decrement: requiredKg }
-          }
-        })
-      }
+    // Asignamos la resta de stock requerida final
+    for (let i = 0; i < ingredients.length; i++) {
+        stockUpdates[i].requiredKg = ingredients[i].quantityKg * scaleFactor
+    }
 
-      await tx.workOrder.update({
-        where: { id: orderId },
-        data: { 
+    // 3. Transacción de Firestore: Actualizar stock de todos y marcar orden como finalizada
+    await db.runTransaction(async (transaction: any) => {
+        // En Firestore, todas las lecturas deben ser antes de escrituras en transacción,
+        // pero arriba ya leímos. Necesitamos re-leer en transacción si queremos asegurar atomicidad pura
+        // por ahora, usando db.runTransaction.
+
+        // Re-leemos stocks usando la transaccion
+        const currentStocks = []
+        for(const su of stockUpdates) {
+             const doc = await transaction.get(su.ref)
+             currentStocks.push(doc.data().stockKg)
+        }
+
+        // Ejecutar descuentos de inventario y verificar negativos
+        for(let i=0; i < stockUpdates.length; i++) {
+             const newStock = currentStocks[i] - stockUpdates[i].requiredKg
+             // Opcional: Validar newStock < 0 si es necesario
+             transaction.update(stockUpdates[i].ref, { stockKg: newStock, updatedAt: new Date() })
+        }
+
+        transaction.update(db.collection("workOrders").doc(orderId), { 
           status: "FINISHED",
           completedAt: new Date(),
-          observations
-        }
-      })
+          observations,
+          updatedAt: new Date()
+        })
     })
 
     revalidatePath("/production")
@@ -114,9 +168,7 @@ export async function completeWorkOrder(orderId: string, observations: string = 
 
 export async function deleteWorkOrder(id: string) {
   try {
-    await prisma.workOrder.delete({
-      where: { id }
-    })
+    await db.collection("workOrders").doc(id).delete()
     revalidatePath("/production")
     return { success: true }
   } catch (error) {
