@@ -60,10 +60,10 @@ export default function DashboardPage() {
         {/* Row 1: Fórmulas + Producción */}
         <section className="grid grid-cols-2 gap-4">
           <Link href="/formulas" className="block h-full">
-            <Card className="border-none shadow-md hover:shadow-lg transition-all bg-[#2563eb] h-full rounded-2xl overflow-hidden relative group">
+            <Card className="border-none shadow-lg hover:shadow-xl transition-all bg-[#2563eb] h-full rounded-2xl overflow-hidden relative group">
               <CardContent className="p-4 flex flex-col items-center text-center relative z-10 h-full">
-                <div className="bg-white/15 p-2 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
-                  <FlaskConical className="h-4 w-4 text-white" />
+                <div className="bg-white/15 p-2.5 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
+                  <FlaskConical className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-xl font-black text-white mb-0.5 tracking-tight">{formulas.length}</div>
                 <div className="text-[9px] font-bold text-white/90 uppercase tracking-widest leading-tight">Fórmulas</div>
@@ -72,10 +72,10 @@ export default function DashboardPage() {
             </Card>
           </Link>
           <Link href="/production" className="block h-full">
-            <Card className="border-none shadow-md hover:shadow-lg transition-all bg-[#2563eb] h-full rounded-2xl overflow-hidden relative group">
+            <Card className="border-none shadow-lg hover:shadow-xl transition-all bg-[#2563eb] h-full rounded-2xl overflow-hidden relative group">
               <CardContent className="p-4 flex flex-col items-center text-center relative z-10 h-full">
-                <div className="bg-white/15 p-2 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
-                  <Boxes className="h-4 w-4 text-white" />
+                <div className="bg-white/15 p-2.5 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
+                  <Boxes className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-xl font-black text-white mb-0.5 tracking-tight">
                   {orders.filter((o: any) => o.status === 'FINISHED').length}
@@ -90,10 +90,10 @@ export default function DashboardPage() {
         {/* Row 2: Ventas del Día + Corte de Caja */}
         <section className="grid grid-cols-2 gap-4">
           <Link href="/historial" className="block h-full">
-            <Card className="border-none shadow-md hover:shadow-lg transition-all bg-[#2563eb] h-full rounded-2xl overflow-hidden relative group">
+            <Card className="border-none shadow-lg hover:shadow-xl transition-all bg-[#2563eb] h-full rounded-2xl overflow-hidden relative group">
               <CardContent className="p-4 flex flex-col items-center text-center relative z-10 h-full">
-                <div className="bg-white/15 p-2 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
-                  <TrendingUp className="h-4 w-4 text-white" />
+                <div className="bg-white/15 p-2.5 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
+                  <TrendingUp className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-xl font-black text-white mb-0.5 tracking-tight">
                   ${stats?.todayTotal?.toFixed(2) ?? "0.00"}
@@ -105,10 +105,10 @@ export default function DashboardPage() {
             </Card>
           </Link>
           <Link href="/caja" className="block h-full">
-            <Card className="border-none shadow-md hover:shadow-lg transition-all bg-[#2563eb] h-full rounded-2xl overflow-hidden relative group">
+            <Card className="border-none shadow-lg hover:shadow-xl transition-all bg-[#2563eb] h-full rounded-2xl overflow-hidden relative group">
               <CardContent className="p-4 flex flex-col items-center justify-center text-center relative z-10 h-full min-h-[120px]">
-                <div className="bg-white/15 p-2 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
-                  <Calculator className="h-4 w-4 text-white" />
+                <div className="bg-white/15 p-2.5 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
+                  <Calculator className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-sm font-black text-white tracking-tight uppercase">Caja</div>
                 <div className="text-[8px] text-white/70 mt-1 uppercase font-black tracking-[0.2em]">Ver actual</div>
