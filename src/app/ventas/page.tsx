@@ -35,10 +35,16 @@ export default function VentasPage() {
 
   useEffect(() => { loadProducts() }, [])
 
-  const filtered = useMemo(() =>
-    products.filter(p =>
-      p.name.toLowerCase().includes(search.toLowerCase()) && p.stockLiters > 0
-    ), [products, search])
+  // Normalize text for accent + case-insensitive search (ej: 'laur' matches 'Láurico')
+  const normalize = (str: string) =>
+    str.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase()
+
+  const filtered = useMemo(() => {
+    const q = normalize(search.trim())
+    return products.filter(p =>
+      (q === "" || normalize(p.name).includes(q)) && p.stockLiters > 0
+    )
+  }, [products, search])
 
   const addToCart = (p: Product) => {
     setCart(prev => {
@@ -164,18 +170,18 @@ export default function VentasPage() {
           filtered.map(p => {
             const inCart = cart[p.id]?.qty || 0
             return (
-              <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 text-base leading-tight truncate">{p.name}</p>
-                    <div className="flex gap-3 mt-1">
-                      <span className="text-xs text-gray-500">
-                        Stock: <span className={`font-bold ${p.stockLiters < 5 ? "text-red-500" : "text-emerald-600"}`}>{p.stockLiters.toFixed(1)} L</span>
-                      </span>
-                      <span className="text-xs text-gray-400">·</span>
-                      <span className="text-xs font-bold text-indigo-600">${p.salePrice?.toFixed(2) ?? "—"}/L</span>
-                    </div>
-                  </div>
+              <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                {/* Price badge at top */}
+                <div className="bg-indigo-600 px-4 py-2 flex items-center justify-between">
+                  <p className="font-black text-white text-base leading-tight truncate mr-2">{p.name}</p>
+                  <span className="text-amber-300 font-black text-lg shrink-0">
+                    ${p.salePrice != null ? p.salePrice.toFixed(2) : "—"}<span className="text-indigo-200 text-xs font-bold">/L</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-3 gap-3">
+                  <span className={`text-sm font-bold ${p.stockLiters < 5 ? "text-red-500" : "text-emerald-600"}`}>
+                    {p.stockLiters.toFixed(1)} L disponibles
+                  </span>
 
                   {/* +/- Controls */}
                   <div className="flex items-center gap-2 shrink-0">
