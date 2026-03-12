@@ -17,6 +17,7 @@ function ProductionOrderForm() {
   const [formulas, setFormulas] = useState<any[]>([])
   const [selectedFormulaId, setSelectedFormulaId] = useState<string>(urlFormulaId || "")
   const [targetVolume, setTargetVolume] = useState<string>("")
+  const [salePrice, setSalePrice] = useState<string>("")
   
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -38,10 +39,13 @@ function ProductionOrderForm() {
     const vol = parseFloat(targetVolume)
     if (!selectedFormulaId) return setError("Debes seleccionar una fórmula base.")
     if (isNaN(vol) || vol <= 0) return setError("El volumen a preparar debe ser mayor a cero.")
+    const isTerminado = selectedFormula?.type === "TERMINADO" || !selectedFormula?.type
+    const price = parseFloat(salePrice)
+    if (isTerminado && (isNaN(price) || price <= 0)) return setError("Ingresa el Precio de Venta por litro para productos terminados.")
 
     setLoading(true)
     setError(null)
-    const result = await createWorkOrder(selectedFormulaId, vol)
+    const result = await createWorkOrder(selectedFormulaId, vol, isTerminado ? price : 0)
     
     if (result.success && result.data) {
       router.push(`/production/${result.data.id}`)
@@ -120,6 +124,25 @@ function ProductionOrderForm() {
                Ingresa el volumen total esperado. El sistema escalará automáticamente los kilos necesarios de cada materia prima de acuerdo a la receta base.
             </p>
           </div>
+
+          {selectedFormula && (selectedFormula.type === "TERMINADO" || !selectedFormula.type) && (
+            <div className="space-y-2 mt-4 pt-4 border-t border-gray-200">
+              <label className="text-sm font-semibold text-gray-700">
+                Precio de Venta <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Input 
+                  type="number" step="0.01" min="0"
+                  value={salePrice} 
+                  onChange={e => setSalePrice(e.target.value)} 
+                  placeholder="Ej. 42.50" 
+                  className="h-14 text-xl font-bold pl-8 pr-6 shadow-sm border-emerald-200 focus:border-emerald-600" 
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl font-bold text-gray-400">$</span>
+              </div>
+              <p className="text-xs text-gray-500 px-1">Precio por litro al que se venderá este producto.</p>
+            </div>
+          )}
 
         </section>
 

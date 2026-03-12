@@ -60,7 +60,7 @@ export async function getWorkOrders() {
   }
 }
 
-export async function createWorkOrder(formulaId: string, targetVolumeLiters: number) {
+export async function createWorkOrder(formulaId: string, targetVolumeLiters: number, salePrice: number = 0) {
   try {
     if (!formulaId || targetVolumeLiters <= 0) {
       return { success: false, error: "Datos de orden inválidos." }
@@ -74,6 +74,7 @@ export async function createWorkOrder(formulaId: string, targetVolumeLiters: num
       userId: authCookie.value,
       formulaId,
       targetVolumeLiters,
+      salePrice: salePrice || 0,
       status: "PENDING",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -214,17 +215,38 @@ export async function completeWorkOrder(orderId: string, observations: string = 
       }
       revalidatePath("/inventory")
     } else {
-      // TERMINADO → guardar en inventario de ventas
-      await db.collection("finishedInventory").add({
-        userId: authCookie.value,
-        formulaId: orderData?.formulaId,
-        formulaName: formulaData?.name,
-        orderId,
-        quantityLiters: orderData?.targetVolumeLiters,
-        costPerLiter: Math.round(costPerLiter * 100) / 100,
-        totalCost: Math.round(totalCostProduccion * 100) / 100,
-        createdAt: new Date(),
-      })
+      // TERMINADO → upsert en productInventory (un doc por producto)
+      const existingSnap = await db.collection("productInventory")
+        .where("userId", "==", authCookie.value)
+        .where("name", "==", formulaData?.name)
+        .get()
+
+      const salePricePerLiter = orderData?.salePrice || 0
+
+      if (!existingSnap.empty) {
+        // Sumar al stock existente, actualizar precio de venta si se pasa
+        const existingDoc = existingSnap.docs[0]
+        const existingData = existingDoc.data()
+        const newStock = (existingData.stockLiters || 0) + orderData!.targetVolumeLiters
+        await db.collection("productInventory").doc(existingDoc.id).update({
+          stockLiters: Math.round(newStock * 100) / 100,
+          costPerLiter: Math.round(costPerLiter * 100) / 100,
+          ...(salePricePerLiter > 0 ? { salePrice: salePricePerLiter } : {}),
+          updatedAt: new Date(),
+        })
+      } else {
+        // Crear producto nuevo en el catálogo de ventas
+        await db.collection("productInventory").add({
+          userId: authCookie.value,
+          formulaId: orderData?.formulaId,
+          name: formulaData?.name,
+          stockLiters: Math.round(orderData!.targetVolumeLiters * 100) / 100,
+          costPerLiter: Math.round(costPerLiter * 100) / 100,
+          salePrice: salePricePerLiter,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+      }
       revalidatePath("/ventas")
     }
 
