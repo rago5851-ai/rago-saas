@@ -203,7 +203,7 @@ export default function VentasPage() {
       {/* ============ CHECKOUT MODAL ============ */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end justify-center" onClick={closeModal}>
-          <div className="w-full max-w-md bg-white rounded-t-3xl shadow-2xl overflow-hidden"
+          <div className="w-full max-w-md bg-white rounded-t-3xl shadow-2xl overflow-y-auto max-h-[90vh]"
             onClick={e => e.stopPropagation()}>
 
             {step !== "SUCCESS" && (
@@ -219,7 +219,7 @@ export default function VentasPage() {
                   <p className="text-indigo-300 text-sm mt-1">{cartItems.reduce((s, i) => s + i.qty, 0)} litros · {cartItems.length} producto{cartItems.length !== 1 ? "s" : ""}</p>
                 </div>
 
-                <div className="px-5 py-5 space-y-4 -mt-4 bg-white rounded-t-3xl relative">
+                <div className="px-5 py-5 space-y-4 -mt-4 bg-white rounded-t-3xl relative pb-28">
                   {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm font-medium flex justify-between">
                       {error}
@@ -254,7 +254,7 @@ export default function VentasPage() {
                           <input type="number" step="0.01" min={total} value={cashInput}
                             onChange={e => setCashInput(e.target.value)}
                             placeholder={total.toFixed(2)}
-                            className="w-full h-14 pl-10 pr-4 text-2xl font-black rounded-xl border-2 border-emerald-300 focus:border-emerald-500 focus:outline-none bg-white"
+                            className="w-full h-14 pl-10 pr-4 text-2xl font-black rounded-xl border-2 border-emerald-300 focus:border-emerald-500 focus:outline-none bg-white text-[#1a1a1a] placeholder:text-gray-400"
                           />
                         </div>
                         {/* Quick buttons */}
