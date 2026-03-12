@@ -90,6 +90,10 @@ export async function createWorkOrder(formulaId: string, targetVolumeLiters: num
 
 export async function completeWorkOrder(orderId: string, observations: string = "") {
   try {
+    const cookieStore = await cookies()
+    const authCookie = cookieStore.get('auth_token')
+    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+
     // 1. Obtener la orden
     const orderDoc = await db.collection("workOrders").doc(orderId).get()
     if (!orderDoc.exists) throw new Error("Orden no encontrada")
@@ -97,74 +101,134 @@ export async function completeWorkOrder(orderId: string, observations: string = 
     const orderData = orderDoc.data()
     if (orderData?.status === "FINISHED") throw new Error("La orden ya está finalizada")
 
-    // 2. Obtener fórmula y recalcular la escala
+    // 2. Obtener fórmula con su tipo
     const formulaDoc = await db.collection("formulas").doc(orderData?.formulaId).get()
     if (!formulaDoc.exists) throw new Error("Fórmula no encontrada")
     
     const formulaData = formulaDoc.data()
+    const formulaType = formulaData?.type || "TERMINADO"   // default backwards-compat
     const ingredients = formulaData?.ingredients || []
 
-    // Obtener información de los insumos implicados (para densidades)
+    // 3. Obtener insumos para cálculos (densidad, precio)
     const rawMaterialRefs = ingredients.map((ing: any) => db.collection("rawMaterials").doc(ing.rawMaterialId))
     const rawMaterialDocs = rawMaterialRefs.length > 0 ? await db.getAll(...rawMaterialRefs) : []
 
-    let baseLiters = 0;
-    const stockUpdates: { ref: any, requiredKg: number, name: string }[] = []
+    let baseLiters = 0
+    let totalCostBase = 0
+    const stockUpdates: { ref: any, requiredKg: number }[] = []
 
     for (let i = 0; i < ingredients.length; i++) {
-        const ing = ingredients[i]
-        const rmDoc = rawMaterialDocs.find(d => d.id === ing.rawMaterialId)
-        if (!rmDoc || !rmDoc.exists) throw new Error("Insumo no encontrado: " + ing.rawMaterialId)
+      const ing = ingredients[i]
+      const rmDoc = rawMaterialDocs.find((d: any) => d.id === ing.rawMaterialId)
+      if (!rmDoc || !rmDoc.exists) throw new Error("Insumo no encontrado: " + ing.rawMaterialId)
 
-        const rmData = rmDoc.data()
-        baseLiters += (ing.quantityKg / rmData?.densityKgL)
+      const rmData = rmDoc.data()
+      baseLiters += (ing.quantityKg / rmData?.densityKgL)
+      totalCostBase += (ing.quantityKg * rmData?.pricePerKg)
 
-        // Preparamos los updates para la transacción
-        stockUpdates.push({
-            ref: rmDoc.ref,
-            requiredKg: 0, // se calcula tras tener el scaleFactor
-            name: rmData?.name || "Insumo desconocido"
-        })
+      stockUpdates.push({ ref: rmDoc.ref, requiredKg: 0 })
     }
-    
+
     if (baseLiters === 0) throw new Error("Fórmula base inválida (Volumen 0L)")
     const scaleFactor = orderData!.targetVolumeLiters / baseLiters
 
-    // Asignamos la resta de stock requerida final
+    // Totales escalados para este lote
+    let totalKgProducidos = 0
+    let totalCostProduccion = 0
+
     for (let i = 0; i < ingredients.length; i++) {
-        stockUpdates[i].requiredKg = ingredients[i].quantityKg * scaleFactor
+      stockUpdates[i].requiredKg = ingredients[i].quantityKg * scaleFactor
+      totalKgProducidos += stockUpdates[i].requiredKg
+      const rmData = rawMaterialDocs.find((d: any) => d.id === ingredients[i].rawMaterialId)?.data()
+      if (rmData) totalCostProduccion += stockUpdates[i].requiredKg * rmData.pricePerKg
     }
 
-    // 3. Transacción de Firestore: Actualizar stock de todos y marcar orden como finalizada
+    const costPerKg = totalKgProducidos > 0 ? totalCostProduccion / totalKgProducidos : 0
+    const costPerLiter = orderData!.targetVolumeLiters > 0 ? totalCostProduccion / orderData!.targetVolumeLiters : 0
+
+    // 4. Transacción: descontar materias primas y cerrar orden
     await db.runTransaction(async (transaction: any) => {
-        // En Firestore, todas las lecturas deben ser antes de escrituras en transacción,
-        // pero arriba ya leímos. Necesitamos re-leer en transacción si queremos asegurar atomicidad pura
-        // por ahora, usando db.runTransaction.
+      // Leer stocks actuales dentro de la transacción
+      const currentStocks: number[] = []
+      for (const su of stockUpdates) {
+        const doc = await transaction.get(su.ref)
+        currentStocks.push(doc.data().stockKg)
+      }
 
-        // Re-leemos stocks usando la transaccion
-        const currentStocks = []
-        for(const su of stockUpdates) {
-             const doc = await transaction.get(su.ref)
-             currentStocks.push(doc.data().stockKg)
-        }
+      // Descontar inventario de ingredientes
+      for (let i = 0; i < stockUpdates.length; i++) {
+        const newStock = currentStocks[i] - stockUpdates[i].requiredKg
+        transaction.update(stockUpdates[i].ref, { stockKg: newStock, updatedAt: new Date() })
+      }
 
-        // Ejecutar descuentos de inventario y verificar negativos
-        for(let i=0; i < stockUpdates.length; i++) {
-             const newStock = currentStocks[i] - stockUpdates[i].requiredKg
-             // Opcional: Validar newStock < 0 si es necesario
-             transaction.update(stockUpdates[i].ref, { stockKg: newStock, updatedAt: new Date() })
-        }
-
-        transaction.update(db.collection("workOrders").doc(orderId), { 
-          status: "FINISHED",
-          completedAt: new Date(),
-          observations,
-          updatedAt: new Date()
-        })
+      // Cerrar la orden
+      transaction.update(db.collection("workOrders").doc(orderId), {
+        status: "FINISHED",
+        completedAt: new Date(),
+        observations,
+        updatedAt: new Date(),
+        totalCost: totalCostProduccion,
+        costPerLiter,
+      })
     })
 
+    // 5. Post-transacción: crear/actualizar el resultado según el tipo de fórmula
+    if (formulaType === "SEMIELABORADO") {
+      // Buscar si ya existe un rawMaterial con el mismo nombre para este usuario
+      const existingSnap = await db.collection("rawMaterials")
+        .where("userId", "==", authCookie.value)
+        .where("name", "==", formulaData?.name)
+        .get()
+
+      const densityKgL = totalKgProducidos > 0 ? orderData!.targetVolumeLiters / totalKgProducidos : 1
+
+      if (!existingSnap.empty) {
+        // Actualizar stock existente (sumar) y recalcular precio ponderado
+        const existingDoc = existingSnap.docs[0]
+        const existingData = existingDoc.data()
+        const oldKg = existingData.stockKg || 0
+        const oldPricePerKg = existingData.pricePerKg || 0
+        const newKg = oldKg + totalKgProducidos
+        // Promedio ponderado del costo
+        const newPricePerKg = newKg > 0 ? ((oldKg * oldPricePerKg) + totalCostProduccion) / newKg : costPerKg
+
+        await db.collection("rawMaterials").doc(existingDoc.id).update({
+          stockKg: newKg,
+          pricePerKg: Math.round(newPricePerKg * 1000) / 1000,
+          densityKgL: Math.round(densityKgL * 1000) / 1000,
+          updatedAt: new Date(),
+        })
+      } else {
+        // Crear nuevo insumo semielaborado en el inventario
+        await db.collection("rawMaterials").add({
+          userId: authCookie.value,
+          name: formulaData?.name,
+          stockKg: Math.round(totalKgProducidos * 1000) / 1000,
+          concentrationPercent: 100,
+          densityKgL: Math.round(densityKgL * 1000) / 1000,
+          pricePerKg: Math.round(costPerKg * 1000) / 1000,
+          esSemielaborado: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+      }
+      revalidatePath("/inventory")
+    } else {
+      // TERMINADO → guardar en inventario de ventas
+      await db.collection("finishedInventory").add({
+        userId: authCookie.value,
+        formulaId: orderData?.formulaId,
+        formulaName: formulaData?.name,
+        orderId,
+        quantityLiters: orderData?.targetVolumeLiters,
+        costPerLiter: Math.round(costPerLiter * 100) / 100,
+        totalCost: Math.round(totalCostProduccion * 100) / 100,
+        createdAt: new Date(),
+      })
+      revalidatePath("/ventas")
+    }
+
     revalidatePath("/production")
-    revalidatePath("/inventory")
     return { success: true }
   } catch (error: any) {
     console.error("Error completando orden:", error)

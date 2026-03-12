@@ -53,6 +53,8 @@ export async function getFormulas() {
   }
 }
 
+export type FormulaProductType = "TERMINADO" | "SEMIELABORADO"
+
 export type NewFormulaIngredient = {
   rawMaterialId: string
   quantityKg: number
@@ -61,7 +63,8 @@ export type NewFormulaIngredient = {
 export async function createFormula(
   name: string,
   instructions: string,
-  ingredients: NewFormulaIngredient[]
+  ingredients: NewFormulaIngredient[],
+  productType: FormulaProductType = "TERMINADO"
 ) {
   try {
     if (!name || ingredients.length === 0) {
@@ -76,6 +79,7 @@ export async function createFormula(
       userId: authCookie.value,
       name,
       instructions,
+      type: productType,
       ingredients: ingredients.map(ing => ({
         rawMaterialId: ing.rawMaterialId,
         quantityKg: ing.quantityKg

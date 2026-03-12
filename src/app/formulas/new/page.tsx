@@ -3,11 +3,11 @@
 import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { getRawMaterials } from "@/lib/actions/inventory"
-import { createFormula, NewFormulaIngredient } from "@/lib/actions/formulas"
+import { createFormula, NewFormulaIngredient, FormulaProductType } from "@/lib/actions/formulas"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AlertCircle, ArrowLeft, Plus, Trash2, Calculator, Info } from "lucide-react"
+import { AlertCircle, ArrowLeft, Plus, Trash2, Calculator, FlaskConical, ShoppingBag } from "lucide-react"
 
 // Tipos base para el cliente
 type RawMaterial = {
@@ -29,6 +29,7 @@ export default function NewFormulaPage() {
   
   const [name, setName] = useState("")
   const [instructions, setInstructions] = useState("")
+  const [productType, setProductType] = useState<FormulaProductType>("TERMINADO")
   const [ingredients, setIngredients] = useState<IngredientRow[]>([
     { id: Math.random().toString(36).substring(2), rawMaterialId: "", quantityGramos: "" }
   ])
@@ -129,7 +130,7 @@ export default function NewFormulaPage() {
     setLoading(true)
     setError(null)
     
-    const result = await createFormula(name, instructions, validIngredients)
+    const result = await createFormula(name, instructions, validIngredients, productType)
     if (result.success) {
       router.push("/formulas")
       router.refresh()
@@ -192,12 +193,32 @@ export default function NewFormulaPage() {
             <label className="text-sm font-semibold text-gray-700">Nombre del Producto</label>
             <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Multiusos Lavanda" className="h-14 text-lg" />
           </div>
+
+          {/* Selector de tipo */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">Tipo de Resultado</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setProductType("TERMINADO")}
+                className={`flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 transition-all font-bold text-sm ${productType === "TERMINADO" ? "border-indigo-600 bg-indigo-50 text-indigo-700" : "border-gray-200 bg-white text-gray-400"}`}>
+                <ShoppingBag className={`h-5 w-5 ${productType === "TERMINADO" ? "text-indigo-600" : "text-gray-400"}`} />
+                <span>Producto Terminado</span>
+                <span className="text-[10px] font-normal opacity-70">Va a venta final</span>
+              </button>
+              <button type="button" onClick={() => setProductType("SEMIELABORADO")}
+                className={`flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 transition-all font-bold text-sm ${productType === "SEMIELABORADO" ? "border-amber-500 bg-amber-50 text-amber-700" : "border-gray-200 bg-white text-gray-400"}`}>
+                <FlaskConical className={`h-5 w-5 ${productType === "SEMIELABORADO" ? "text-amber-600" : "text-gray-400"}`} />
+                <span>Semielaborado</span>
+                <span className="text-[10px] font-normal opacity-70">Regresa a bodega</span>
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-gray-700">Instrucciones de Preparación</label>
             <textarea 
               value={instructions} onChange={e => setInstructions(e.target.value)}
               className="w-full rounded-md border border-gray-400 bg-white p-3 text-base font-semibold text-black placeholder:text-gray-600 focus:ring-2 focus:ring-indigo-600 min-h-[100px]"
-              placeholder="1. Llenar tanque con la mitad de agua...\n2. Agregar reactivos..."
+              placeholder="1. Llenar tanque con la mitad de agua...&#10;2. Agregar reactivos..."
             />
           </div>
         </section>
