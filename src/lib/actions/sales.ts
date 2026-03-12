@@ -136,10 +136,15 @@ export async function getDashboardStats(dateFilter?: string) {
     }
 
     const snap = await query.get()
-    console.log("[AUDIT] getDashboardStats results", { 
+    
+    // DEBUG: Get a sample of documents to see why they might not match
+    const sample = snap.docs.length > 0 ? snap.docs[0].data() : "NO_DOCS_FOUND";
+    
+    console.log("[AUDIT] getDashboardStats Results:", { 
       userId, 
       dateFilter: dateFilter || "server-default", 
-      docCount: snap.size 
+      found: snap.size,
+      firstDocSample: sample
     });
 
     const todaySales = snap.docs.map(doc => doc.data())
