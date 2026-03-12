@@ -88,6 +88,10 @@ export async function processCashCut(
     })
 
     revalidatePath("/caja")
+    revalidatePath("/")
+    revalidatePath("/ventas")
+    revalidatePath("/historial")
+    
     return { success: true, difference: Math.round(difference * 100) / 100, cashRetained: Math.round(cashRetained * 100) / 100 }
   } catch (error: any) {
     console.error("Cash cut error:", error?.message || error)

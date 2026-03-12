@@ -82,6 +82,7 @@ export async function createWorkOrder(formulaId: string, targetVolumeLiters: num
     const orderRef = await db.collection("workOrders").add(orderData)
 
     revalidatePath("/production")
+    revalidatePath("/")
     return { success: true, data: { id: orderRef.id, ...orderData } }
   } catch (error) {
     return { success: false, error: "Error al crear la orden de producción" }
@@ -250,6 +251,7 @@ export async function completeWorkOrder(orderId: string, observations: string = 
     }
 
     revalidatePath("/production")
+    revalidatePath("/")
     return { success: true }
   } catch (error: any) {
     console.error("Error completando orden:", error)
@@ -269,6 +271,7 @@ export async function deleteWorkOrder(id: string) {
 
     await db.collection("workOrders").doc(id).delete()
     revalidatePath("/production")
+    revalidatePath("/")
     return { success: true }
   } catch (error) {
     console.error("Error deleting work order:", error)

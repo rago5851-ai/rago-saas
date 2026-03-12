@@ -91,6 +91,7 @@ export async function createFormula(
     const docRef = await db.collection("formulas").add(formulaData)
 
     revalidatePath("/formulas")
+    revalidatePath("/")
     return { success: true, data: { id: docRef.id, ...formulaData } }
   } catch (error) {
     console.error("Error creating formula:", error)

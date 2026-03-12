@@ -17,7 +17,7 @@ const METHOD_COLOR: Record<string, string> = {
 }
 
 export default function HistorialPage() {
-  const todayISO = new Date().toISOString().slice(0, 10)
+  const todayISO = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD en formato local
   const [sales, setSales] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState(todayISO)

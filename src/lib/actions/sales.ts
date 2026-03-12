@@ -71,6 +71,10 @@ export async function processCheckout(cart: CartItem[], paymentMethod: PaymentMe
     })
 
     revalidatePath("/ventas")
+    revalidatePath("/historial")
+    revalidatePath("/caja")
+    revalidatePath("/")
+    
     return { success: true, total: Math.round(total * 100) / 100 }
   } catch (error: any) {
     console.error("Checkout error:", error?.message || error)
@@ -86,9 +90,10 @@ export async function getSalesHistory(dateFilter?: string) {
     let query = db.collection("salesHistory").where("userId", "==", userId)
 
     if (dateFilter) {
-      // dateFilter is YYYY-MM-DD. We filter from 00:00:00 to 23:59:59
-      const start = new Date(`${dateFilter}T00:00:00`)
-      const end = new Date(`${dateFilter}T23:59:59.999`)
+      // dateFilter is YYYY-MM-DD. 
+      // We create boundaries ensuring we cover the full day regardless of exact server time.
+      const start = new Date(`${dateFilter}T00:00:00Z`) // Force UTC to avoid local server offset
+      const end = new Date(`${dateFilter}T23:59:59.999Z`)
       query = query.where("createdAt", ">=", start).where("createdAt", "<=", end)
     }
 
@@ -108,9 +113,11 @@ export async function getDashboardStats() {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
 
-    // Start of today (local time)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    // Start of today in local time for the user (approximated as last 24h or relative to midnight)
+    // To be safe and since this is a dashboard, we show sales from the last 18 hours 
+    // or properly calculate the "today" boundary in a consistent way.
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0)
 
     const snap = await db.collection("salesHistory")
       .where("userId", "==", userId)

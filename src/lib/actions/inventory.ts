@@ -51,6 +51,7 @@ export async function createRawMaterial(formData: FormData) {
     const docRef = await db.collection("rawMaterials").add(data)
 
     revalidatePath("/inventory")
+    revalidatePath("/")
     return { success: true, data: { id: docRef.id, ...data } }
   } catch (error) {
     console.error("Error creating material:", error)
@@ -127,6 +128,7 @@ export async function updateRawMaterialFromForm(formData: FormData) {
     await db.collection("rawMaterials").doc(id).update(data)
 
     revalidatePath("/inventory")
+    revalidatePath("/")
     return { success: true }
   } catch (error) {
     return { success: false, error: "Hubo un error al actualizar." }
