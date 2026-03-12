@@ -74,22 +74,22 @@ export default function InventoryPage() {
           </div>
         ) : (
           materials.map((m: any) => (
-            <Card key={m.id} className="overflow-hidden bg-white border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex justify-between p-5 pb-3 items-start gap-4">
+            <Card key={m.id} className="overflow-hidden bg-white border-gray-100 rounded-2xl shadow-md hover:shadow-lg transition-all">
+              <div className="flex justify-between p-5 pb-4 items-start gap-4 bg-white">
                 <div className="pr-2 flex-grow">
-                  <div className="font-black text-gray-900 text-lg leading-tight w-full break-words">{m.name}</div>
+                  <div className="font-extrabold text-black text-lg leading-tight w-full break-words tracking-tight">{m.name}</div>
                   
-                  {/* Action Icons - Clean and in the white section */}
-                  <div className="flex gap-2 mt-3">
+                  {/* Action Icons - Clean, white background with blue border */}
+                  <div className="flex gap-2 mt-4">
                      <Link href={`/inventory/${m.id}/edit`}>
-                       <button className="text-gray-400 hover:text-indigo-600 bg-gray-50 hover:bg-indigo-50 p-2 rounded-xl transition-all flex items-center justify-center border border-gray-100">
+                       <button className="text-indigo-600 hover:text-indigo-700 bg-white p-2 rounded-xl transition-all flex items-center justify-center border-2 border-indigo-50 shadow-sm hover:border-indigo-100">
                          <Edit2 className="h-4 w-4" />
                        </button>
                      </Link>
                      <button 
                        onClick={() => handleDelete(m.id, m.name)}
                        disabled={deleting === m.id}
-                       className="text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-50 p-2 rounded-xl transition-all flex items-center justify-center border border-gray-100"
+                       className="text-red-500 hover:text-red-600 bg-white p-2 rounded-xl transition-all flex items-center justify-center border-2 border-red-50 shadow-sm hover:border-red-100"
                      >
                        {deleting === m.id ? <div className="h-4 w-4 border-2 border-red-300 border-t-transparent animate-spin rounded-full"/> : <Trash2 className="h-4 w-4" />}
                      </button>
@@ -97,15 +97,15 @@ export default function InventoryPage() {
                 </div>
                 
                 <div className="flex flex-col items-end shrink-0">
-                  <span className={`text-2xl font-black ${m.stockKg < 5 ? "text-red-500" : "text-emerald-600"}`}>
+                  <span className={`text-2xl font-black ${m.stockKg < 5 ? "text-red-600" : "text-indigo-600"}`}>
                     {formatStock(m.stockKg)}
                   </span>
-                  <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mt-0.5">Stock en Bodega</span>
+                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black mt-0.5">Bodega</span>
                 </div>
               </div>
               
-              {/* Vibrant Blue Footer Section */}
-              <CardContent className="px-5 py-4 bg-indigo-600 border-t border-indigo-700 shadow-inner">
+              {/* Vibrant Blue Footer Section (Blue Ceruleo color) */}
+              <CardContent className="px-5 py-5 bg-[#007bff] border-t border-blue-600/20">
                 <div className="grid grid-cols-3 gap-2">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest opacity-80">Densidad</span>
