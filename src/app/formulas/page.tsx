@@ -54,9 +54,16 @@ export default function FormulasPage() {
           formulas.map((f: any) => {
             
             // Calculos básicos para la fórmula base
-            const baseKg = f.FormulaIngredients.reduce((sum: any, ing: any) => sum + ing.quantityKg, 0)
-            const baseLiters = f.FormulaIngredients.reduce((sum: any, ing: any) => sum + (ing.quantityKg / ing.rawMaterial.densityKgL), 0)
-            const rawCost = f.FormulaIngredients.reduce((sum: any, ing: any) => sum + (ing.quantityKg * ing.rawMaterial.pricePerKg), 0)
+            // Calculos básicos para la fórmula base con guards de seguridad
+            const baseKg = f.FormulaIngredients.reduce((sum: any, ing: any) => sum + (ing.quantityKg || 0), 0)
+            const baseLiters = f.FormulaIngredients.reduce((sum: any, ing: any) => {
+              const density = ing.rawMaterial?.densityKgL || 1;
+              return sum + ((ing.quantityKg || 0) / density);
+            }, 0)
+            const rawCost = f.FormulaIngredients.reduce((sum: any, ing: any) => {
+              const price = ing.rawMaterial?.pricePerKg || 0;
+              return sum + ((ing.quantityKg || 0) * price);
+            }, 0)
             const costPerLiter = baseLiters > 0 ? (rawCost / baseLiters).toFixed(2) : "0.00"
 
             return (
@@ -92,15 +99,15 @@ export default function FormulasPage() {
                 {expandedId === f.id && (
                   <div className="px-4 py-3 bg-white border-t border-b border-gray-100 space-y-2">
                     <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Detalle de Insumos</h4>
-                    {f.FormulaIngredients.map((ing: any) => {
-                      const percentage = ((ing.quantityKg / baseKg) * 100).toFixed(1)
-                      const cost = (ing.quantityKg * ing.rawMaterial.pricePerKg).toFixed(2)
+                    {f.FormulaIngredients.map((ing: any, i: number) => {
+                      const percentage = baseKg > 0 ? ((ing.quantityKg / baseKg) * 100).toFixed(1) : "0"
+                      const cost = (ing.quantityKg * (ing.rawMaterial?.pricePerKg || 0)).toFixed(2)
                       const weightText = ing.quantityKg < 1 ? `${(ing.quantityKg * 1000).toFixed(0)} g` : `${ing.quantityKg} kg`
 
                       return (
-                        <div key={ing.id} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 mb-2 last:border-0 last:mb-0 last:pb-0">
+                        <div key={ing.id || i} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 mb-2 last:border-0 last:mb-0 last:pb-0">
                            <div>
-                             <p className="font-semibold text-gray-700 leading-snug">{ing.rawMaterial.name}</p>
+                             <p className="font-semibold text-gray-700 leading-snug">{ing.rawMaterial?.name || "Insumo no encontrado"}</p>
                              <p className="text-xs text-gray-400 mt-0.5">{weightText} <span className="text-indigo-400/80">({percentage}%)</span></p>
                            </div>
                            <div className="font-bold text-indigo-600">${cost}</div>
