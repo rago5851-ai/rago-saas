@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useState } from "react"
 import { getCashRegisterState, processCashCut } from "@/lib/actions/caja"
 import { ArrowLeft, Scissors, CheckCircle2, X, Banknote, CreditCard, ArrowRightLeft, Wallet } from "lucide-react"

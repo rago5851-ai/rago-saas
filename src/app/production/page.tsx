@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useState } from "react";
 import { getWorkOrders, deleteWorkOrder } from "@/lib/actions/production";
 import { Card, CardContent } from "@/components/ui/card";

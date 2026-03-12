@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useState } from "react"
 import { getFormulas } from "@/lib/actions/formulas"
 import { getWorkOrders } from "@/lib/actions/production"

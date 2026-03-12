@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useState } from "react";
 import { getRawMaterials, deleteRawMaterial } from "@/lib/actions/inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";

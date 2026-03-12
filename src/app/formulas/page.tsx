@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useState } from "react";
 import { getFormulas } from "@/lib/actions/formulas";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
