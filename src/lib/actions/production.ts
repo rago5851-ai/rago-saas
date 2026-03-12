@@ -10,14 +10,12 @@ export async function getWorkOrders() {
     const authCookie = cookieStore.get('auth_token')
     if (!authCookie?.value) return { success: false, error: "No autorizado" }
 
-    // 1. Obtener órdenes del usuario
+    // 1. Obtener órdenes del usuario (sin orderBy para evitar índice compuesto)
     const ordersSnapshot = await db.collection("workOrders")
       .where("userId", "==", authCookie.value)
-      .orderBy("createdAt", "desc")
       .get()
 
     // 2. Para popular la fórmula e insumos, necesitamos buscarlos
-    // Esto se puede optimizar, pero por ahora obtenemos todo del user para cruzar en memoria.
     const formulasSnapshot = await db.collection("formulas").where("userId", "==", authCookie.value).get()
     const rawMaterialsSnapshot = await db.collection("rawMaterials").where("userId", "==", authCookie.value).get()
     
@@ -38,14 +36,21 @@ export async function getWorkOrders() {
       })
     })
 
-    const orders = ordersSnapshot.docs.map(doc => {
-      const data = doc.data()
-      return {
-        id: doc.id,
-        ...data,
-        formula: formulasMap.get(data.formulaId) || null
-      }
-    })
+    const orders = ordersSnapshot.docs
+      .map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          ...data,
+          formula: formulasMap.get(data.formulaId) || null
+        }
+      })
+      // Sort in memory: más recientes primero
+      .sort((a: any, b: any) => {
+        const aDate = a.createdAt?.toDate?.() || new Date(a.createdAt || 0)
+        const bDate = b.createdAt?.toDate?.() || new Date(b.createdAt || 0)
+        return bDate.getTime() - aDate.getTime()
+      })
 
     return { success: true, data: orders }
   } catch (error) {

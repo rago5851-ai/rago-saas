@@ -10,10 +10,9 @@ export async function getFormulas() {
     const authCookie = cookieStore.get('auth_token')
     if (!authCookie?.value) return { success: false, error: "No autorizado" }
 
-    // 1. Obtener formulas del usuario
+    // 1. Obtener formulas del usuario (sin orderBy para evitar índice compuesto)
     const formulasSnapshot = await db.collection("formulas")
       .where("userId", "==", authCookie.value)
-      .orderBy("updatedAt", "desc")
       .get()
 
     // 2. Obtener insumos para popularlos manualmente (Firestore no tiene 'include')
@@ -26,23 +25,29 @@ export async function getFormulas() {
       rawMaterialsMap.set(doc.id, { id: doc.id, ...doc.data() })
     })
 
-    const formulas = formulasSnapshot.docs.map(doc => {
-      const data = doc.data()
-      // Reconstruimos la estructura esperada por el UI
-      return {
-        id: doc.id,
-        ...data,
-        FormulaIngredients: (data.ingredients || []).map((ing: any) => ({
-          rawMaterialId: ing.rawMaterialId,
-          quantityKg: ing.quantityKg,
-          rawMaterial: rawMaterialsMap.get(ing.rawMaterialId) || null
-        }))
-      }
-    })
+    const formulas = formulasSnapshot.docs
+      .map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          ...data,
+          FormulaIngredients: (data.ingredients || []).map((ing: any) => ({
+            rawMaterialId: ing.rawMaterialId,
+            quantityKg: ing.quantityKg,
+            rawMaterial: rawMaterialsMap.get(ing.rawMaterialId) || null
+          }))
+        }
+      })
+      // Sort in memory: más recientes primero
+      .sort((a: any, b: any) => {
+        const aDate = a.updatedAt?.toDate?.() || new Date(a.updatedAt || 0)
+        const bDate = b.updatedAt?.toDate?.() || new Date(b.updatedAt || 0)
+        return bDate.getTime() - aDate.getTime()
+      })
 
     return { success: true, data: formulas }
-  } catch (error) {
-    console.error("Error fetching formulas:", error)
+  } catch (error: any) {
+    console.error("Error fetching formulas:", error?.message || error)
     return { success: false, error: "No se pudieron cargar las fórmulas" }
   }
 }

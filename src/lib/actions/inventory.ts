@@ -12,13 +12,12 @@ export async function getRawMaterials() {
 
     const snapshot = await db.collection("rawMaterials")
                              .where("userId", "==", authCookie.value)
-                             .orderBy("name", "asc")
                              .get()
 
-    const materials = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }))
+    // Sort in memory to avoid needing a Firestore composite index
+    const materials = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .sort((a: any, b: any) => a.name.localeCompare(b.name))
 
     return { success: true, data: materials }
   } catch (error) {
