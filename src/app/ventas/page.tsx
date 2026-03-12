@@ -72,7 +72,7 @@ export default function VentasPage() {
   const change = cashPaid - total
 
   const openModal = () => { setStep("METHODS"); setMethod("EFECTIVO"); setCashInput(""); setError(null); setShowModal(true) }
-  const closeModal = () => { if (!checkingOut) { setShowModal(false); setSuccessData(null) } }
+  const closeModal = () => { if (!checkingOut) { setShowModal(false); setSuccessData(null); setCart({}) } }
 
   const handleConfirmPayment = async () => {
     if (method === "EFECTIVO" && cashPaid < total) {
@@ -305,7 +305,12 @@ export default function VentasPage() {
 
             {/* SUCCESS SCREEN */}
             {step === "SUCCESS" && successData && (
-              <div className="px-6 py-10 flex flex-col items-center text-center">
+              <div className="px-6 py-10 pb-32 flex flex-col items-center text-center relative">
+                {/* X button on success screen */}
+                <button onClick={closeModal}
+                  className="absolute top-4 right-4 h-8 w-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600">
+                  <X className="h-4 w-4" />
+                </button>
                 <div className="h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center mb-5">
                   <CheckCircle2 className="h-10 w-10 text-emerald-500" />
                 </div>
