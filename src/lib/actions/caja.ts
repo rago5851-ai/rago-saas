@@ -1,37 +1,39 @@
 "use server"
 
-import { db } from "@/lib/firebase"
+import { db, auth } from "@/lib/firebase"
 import { cookies } from "next/headers"
 import { serializeDoc } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
+import { getUserId } from "@/lib/auth-utils"
 
-/** Returns totals by payment method since the last cashCut (or all time if no cut exists) */
 export async function getCashRegisterState() {
   try {
-    const cookieStore = await cookies()
-    const authCookie = cookieStore.get('auth_token')
-    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
 
-    // Find the most recent cash cut to know our session start
+    // 1. Encontrar el corte de caja más reciente
     const cutsSnap = await db.collection("cashCuts")
-      .where("userId", "==", authCookie.value)
+      .where("userId", "==", userId)
+      .orderBy("createdAt", "desc")
+      .limit(1)
       .get()
 
-    let sessionStartISO = ""
+    let sessionStart: Date | null = null
     let retainedCash = 0
     if (!cutsSnap.empty) {
-      const cuts = cutsSnap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .sort((a: any, b: any) => (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0))
-      const lastCut: any = cuts[0]
-      sessionStartISO = lastCut.createdAt?.toDate?.()?.toISOString() || ""
+      const lastCut = cutsSnap.docs[0].data()
+      sessionStart = lastCut.createdAt?.toDate() || null
       retainedCash = lastCut.cashRetained || 0
     }
 
-    // Fetch sales since last cut
-    const salesSnap = await db.collection("salesHistory")
-      .where("userId", "==", authCookie.value)
-      .get()
+    // 2. Traer ventas filtradas desde el servidor (User + Fecha)
+    let salesQuery = db.collection("salesHistory").where("userId", "==", userId)
+    
+    if (sessionStart) {
+      salesQuery = salesQuery.where("createdAt", ">", sessionStart)
+    }
+
+    const salesSnap = await salesQuery.get()
 
     let efectivo = retainedCash
     let tarjeta = 0
@@ -39,8 +41,6 @@ export async function getCashRegisterState() {
 
     salesSnap.docs.forEach(doc => {
       const data = doc.data()
-      const createdAt = data.createdAt?.toDate?.()?.toISOString() || ""
-      if (sessionStartISO && createdAt <= sessionStartISO) return
       const amount = data.total || 0
       if (data.paymentMethod === "EFECTIVO") efectivo += amount
       else if (data.paymentMethod === "TARJETA") tarjeta += amount
@@ -71,15 +71,14 @@ export async function processCashCut(
   withdraw: boolean
 ) {
   try {
-    const cookieStore = await cookies()
-    const authCookie = cookieStore.get('auth_token')
-    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
 
     const difference = manualCount - expectedEfectivo
     const cashRetained = withdraw ? 0 : manualCount
 
     await db.collection("cashCuts").add({
-      userId: authCookie.value,
+      userId: userId,
       expectedEfectivo: Math.round(expectedEfectivo * 100) / 100,
       manualCount: Math.round(manualCount * 100) / 100,
       difference: Math.round(difference * 100) / 100,

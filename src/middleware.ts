@@ -7,17 +7,17 @@ const protectedRoutes = ['/inventory', '/formulas', '/production']
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
-  // Si intenta entrar al dashboard raíz, redigirir a login si no hay ref
+  // Protect specific routes and the root dashboard
   const isProtected = protectedRoutes.some(route => pathname.startsWith(route)) || pathname === '/'
   
-  const isAuthenticated = request.cookies.has('auth_token')
+  const hasSession = request.cookies.has('auth_token')
 
-  if (isProtected && !isAuthenticated) {
+  if (isProtected && !hasSession) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirigir de login a home si ya está autenticado
-  if (pathname === '/login' && isAuthenticated) {
+  // Redirect from login to home/inventory if session exists
+  if (pathname === '/login' && hasSession) {
     return NextResponse.redirect(new URL('/inventory', request.url))
   }
 

@@ -1,24 +1,24 @@
 "use server"
 
-import { db } from "@/lib/firebase"
+import { db, auth } from "@/lib/firebase"
 import { serializeDoc } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
+import { getUserId } from "@/lib/auth-utils"
 
 export async function getWorkOrders() {
   try {
-    const cookieStore = await cookies()
-    const authCookie = cookieStore.get('auth_token')
-    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
 
     // 1. Obtener órdenes del usuario (sin orderBy para evitar índice compuesto)
     const ordersSnapshot = await db.collection("workOrders")
-      .where("userId", "==", authCookie.value)
+      .where("userId", "==", userId)
       .get()
 
     // 2. Para popular la fórmula e insumos, necesitamos buscarlos
-    const formulasSnapshot = await db.collection("formulas").where("userId", "==", authCookie.value).get()
-    const rawMaterialsSnapshot = await db.collection("rawMaterials").where("userId", "==", authCookie.value).get()
+    const formulasSnapshot = await db.collection("formulas").where("userId", "==", userId).get()
+    const rawMaterialsSnapshot = await db.collection("rawMaterials").where("userId", "==", userId).get()
     
     const rawMaterialsMap = new Map()
     rawMaterialsSnapshot.docs.forEach(doc => rawMaterialsMap.set(doc.id, serializeDoc({ id: doc.id, ...doc.data() })))
@@ -66,12 +66,11 @@ export async function createWorkOrder(formulaId: string, targetVolumeLiters: num
       return { success: false, error: "Datos de orden inválidos." }
     }
 
-    const cookieStore = await cookies()
-    const authCookie = cookieStore.get('auth_token')
-    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
 
     const orderData = {
-      userId: authCookie.value,
+      userId: userId,
       formulaId,
       targetVolumeLiters,
       salePrice: salePrice || 0,
@@ -91,15 +90,15 @@ export async function createWorkOrder(formulaId: string, targetVolumeLiters: num
 
 export async function completeWorkOrder(orderId: string, observations: string = "") {
   try {
-    const cookieStore = await cookies()
-    const authCookie = cookieStore.get('auth_token')
-    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
 
     // 1. Obtener la orden
     const orderDoc = await db.collection("workOrders").doc(orderId).get()
     if (!orderDoc.exists) throw new Error("Orden no encontrada")
     
     const orderData = orderDoc.data()
+    if (orderData?.userId !== userId) throw new Error("Acceso denegado")
     if (orderData?.status === "FINISHED") throw new Error("La orden ya está finalizada")
 
     // 2. Obtener fórmula con su tipo
@@ -177,7 +176,7 @@ export async function completeWorkOrder(orderId: string, observations: string = 
     if (formulaType === "SEMIELABORADO") {
       // Buscar si ya existe un rawMaterial con el mismo nombre para este usuario
       const existingSnap = await db.collection("rawMaterials")
-        .where("userId", "==", authCookie.value)
+        .where("userId", "==", userId)
         .where("name", "==", formulaData?.name)
         .get()
 
@@ -202,7 +201,7 @@ export async function completeWorkOrder(orderId: string, observations: string = 
       } else {
         // Crear nuevo insumo semielaborado en el inventario
         await db.collection("rawMaterials").add({
-          userId: authCookie.value,
+          userId: userId,
           name: formulaData?.name,
           stockKg: Math.round(totalKgProducidos * 1000) / 1000,
           concentrationPercent: 100,
@@ -217,7 +216,7 @@ export async function completeWorkOrder(orderId: string, observations: string = 
     } else {
       // TERMINADO → upsert en productInventory (un doc por producto)
       const existingSnap = await db.collection("productInventory")
-        .where("userId", "==", authCookie.value)
+        .where("userId", "==", userId)
         .where("name", "==", formulaData?.name)
         .get()
 
@@ -237,7 +236,7 @@ export async function completeWorkOrder(orderId: string, observations: string = 
       } else {
         // Crear producto nuevo en el catálogo de ventas
         await db.collection("productInventory").add({
-          userId: authCookie.value,
+          userId: userId,
           formulaId: orderData?.formulaId,
           name: formulaData?.name,
           stockLiters: Math.round(orderData!.targetVolumeLiters * 100) / 100,
@@ -260,6 +259,14 @@ export async function completeWorkOrder(orderId: string, observations: string = 
 
 export async function deleteWorkOrder(id: string) {
   try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    const doc = await db.collection("workOrders").doc(id).get()
+    if (!doc.exists || doc.data()?.userId !== userId) {
+      return { success: false, error: "No tienes permiso para eliminar este recurso" }
+    }
+
     await db.collection("workOrders").doc(id).delete()
     revalidatePath("/production")
     return { success: true }

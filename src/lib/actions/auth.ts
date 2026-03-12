@@ -58,6 +58,7 @@ export async function loginAction(formData: FormData) {
       return { success: false, error: "Error de autenticación" }
     }
 
+    const idToken = data.idToken
     const uid = data.localId
 
     // 2. Obtener datos del usuario desde Firestore
@@ -89,13 +90,18 @@ export async function loginAction(formData: FormData) {
       role = userData?.role || "CUSTOMER"
     }
 
-    // 3. Setear cookie con el UID de Firebase
+    // 3. Crear Session Cookie de Firebase (más seguro que el UID plano)
+    // Expira en 5 días (limite de Firebase Session Cookies)
+    const expiresIn = 60 * 60 * 24 * 5 * 1000 
+    const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn })
+
     const cookieStore = await cookies()
-    cookieStore.set('auth_token', uid, {
+    cookieStore.set('auth_token', sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge: expiresIn / 1000,
       path: "/",
+      sameSite: "lax"
     })
     
     return { success: true, role }
@@ -147,13 +153,32 @@ export async function registerAction(formData: FormData) {
       createdAt: new Date(),
     })
 
-    // 3. Establecer cookie 
+    // 3. Generar Session Cookie
+    // Como estamos en el servidor y acabamos de crear al usuario, 
+    // generamos un custom token y lo cambiamos por un ID token para crear la session cookie.
+    const customToken = await auth.createCustomToken(uid)
+    const apiKey = process.env.FIREBASE_API_KEY
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: customToken, returnSecureToken: true }),
+      }
+    )
+    const data = await res.json()
+    const idToken = data.idToken
+
+    const expiresIn = 60 * 60 * 24 * 5 * 1000 
+    const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn })
+
     const cookieStore = await cookies()
-    cookieStore.set('auth_token', uid, {
+    cookieStore.set('auth_token', sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge: expiresIn / 1000,
       path: "/",
+      sameSite: "lax"
     })
     
     return { success: true, role }

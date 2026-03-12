@@ -1,19 +1,18 @@
 "use server"
 
-import { db } from "@/lib/firebase"
+import { db, auth } from "@/lib/firebase"
 import { cookies } from "next/headers"
 import { serializeDoc } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
+import { getUserId } from "@/lib/auth-utils"
 
 export async function getProductInventory() {
   try {
-    const cookieStore = await cookies()
-    const authCookie = cookieStore.get('auth_token')
-    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
 
-    // productInventory holds one doc per product, with salePrice + stockLiters
     const snapshot = await db.collection("productInventory")
-      .where("userId", "==", authCookie.value)
+      .where("userId", "==", userId)
       .get()
 
     const items = snapshot.docs
@@ -32,20 +31,16 @@ export type PaymentMethod = "EFECTIVO" | "TARJETA" | "TRANSFERENCIA"
 
 export async function processCheckout(cart: CartItem[], paymentMethod: PaymentMethod = "EFECTIVO", amountPaid: number = 0) {
   try {
-    const cookieStore = await cookies()
-    const authCookie = cookieStore.get('auth_token')
-    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
     if (!cart || cart.length === 0) return { success: false, error: "El carrito está vacío" }
 
     const total = cart.reduce((s, i) => s + i.quantity * i.pricePerLiter, 0)
 
-    // 1. Descontar stock en transacción — TODAS las lecturas primero, luego las escrituras
     await db.runTransaction(async (transaction: any) => {
-      // FASE 1: Leer todos los documentos
       const refs = cart.map(item => db.collection("productInventory").doc(item.productId))
       const snaps = await Promise.all(refs.map(ref => transaction.get(ref)))
 
-      // FASE 2: Validar stock y calcular nuevos valores
       const updates: { ref: any; newStock: number }[] = []
       for (let i = 0; i < cart.length; i++) {
         const item = cart[i]
@@ -59,15 +54,13 @@ export async function processCheckout(cart: CartItem[], paymentMethod: PaymentMe
         updates.push({ ref: refs[i], newStock })
       }
 
-      // FASE 3: Escribir — descontar stock de cada producto
       for (const { ref, newStock } of updates) {
         transaction.update(ref, { stockLiters: newStock, updatedAt: new Date() })
       }
 
-      // FASE 4: Escribir — guardar registro de venta
       const saleRef = db.collection("salesHistory").doc()
       transaction.set(saleRef, {
-        userId: authCookie.value,
+        userId: userId,
         items: cart,
         total: Math.round(total * 100) / 100,
         paymentMethod,
@@ -87,25 +80,21 @@ export async function processCheckout(cart: CartItem[], paymentMethod: PaymentMe
 
 export async function getSalesHistory(dateFilter?: string) {
   try {
-    const cookieStore = await cookies()
-    const authCookie = cookieStore.get('auth_token')
-    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
 
-    const snap = await db.collection("salesHistory")
-      .where("userId", "==", authCookie.value)
-      .get()
+    let query = db.collection("salesHistory").where("userId", "==", userId)
 
-    let sales = snap.docs
-      .map(doc => serializeDoc({ id: doc.id, ...doc.data() }))
-      .sort((a: any, b: any) => (b.createdAt || "").localeCompare(a.createdAt || ""))
-
-    // Filter by date if provided (YYYY-MM-DD in local time)
     if (dateFilter) {
-      sales = sales.filter((s: any) => {
-        if (!s.createdAt) return false
-        return s.createdAt.slice(0, 10) === dateFilter
-      })
+      // dateFilter is YYYY-MM-DD. We filter from 00:00:00 to 23:59:59
+      const start = new Date(`${dateFilter}T00:00:00`)
+      const end = new Date(`${dateFilter}T23:59:59.999`)
+      query = query.where("createdAt", ">=", start).where("createdAt", "<=", end)
     }
+
+    const snap = await query.orderBy("createdAt", "desc").get()
+
+    const sales = snap.docs.map(doc => serializeDoc({ id: doc.id, ...doc.data() }))
 
     return { success: true, data: sales }
   } catch (error: any) {
@@ -116,20 +105,19 @@ export async function getSalesHistory(dateFilter?: string) {
 
 export async function getDashboardStats() {
   try {
-    const cookieStore = await cookies()
-    const authCookie = cookieStore.get('auth_token')
-    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    // Start of today (local time)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
 
     const snap = await db.collection("salesHistory")
-      .where("userId", "==", authCookie.value)
+      .where("userId", "==", userId)
+      .where("createdAt", ">=", today)
       .get()
 
-    const allSales = snap.docs.map(doc => serializeDoc({ id: doc.id, ...doc.data() }))
-
-    // Today in UTC (ISO slice)
-    const todayUTC = new Date().toISOString().slice(0, 10)
-
-    const todaySales = allSales.filter((s: any) => s.createdAt?.slice(0, 10) === todayUTC)
+    const todaySales = snap.docs.map(doc => doc.data())
     const todayTotal = todaySales.reduce((sum: number, s: any) => sum + (s.total || 0), 0)
     const todayCount = todaySales.length
 

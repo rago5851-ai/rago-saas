@@ -1,24 +1,24 @@
 "use server"
 
-import { db } from "@/lib/firebase"
+import { db, auth } from "@/lib/firebase"
 import { serializeDoc } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
+import { getUserId } from "@/lib/auth-utils"
 
 export async function getFormulas() {
   try {
-    const cookieStore = await cookies()
-    const authCookie = cookieStore.get('auth_token')
-    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
 
     // 1. Obtener formulas del usuario (sin orderBy para evitar índice compuesto)
     const formulasSnapshot = await db.collection("formulas")
-      .where("userId", "==", authCookie.value)
+      .where("userId", "==", userId)
       .get()
 
     // 2. Obtener insumos para popularlos manualmente (Firestore no tiene 'include')
     const rawMaterialsSnapshot = await db.collection("rawMaterials")
-      .where("userId", "==", authCookie.value)
+      .where("userId", "==", userId)
       .get()
       
     const rawMaterialsMap = new Map()
@@ -71,12 +71,11 @@ export async function createFormula(
       return { success: false, error: "La fórmula debe tener un nombre y al menos un ingrediente." }
     }
 
-    const cookieStore = await cookies()
-    const authCookie = cookieStore.get('auth_token')
-    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
 
     const formulaData = {
-      userId: authCookie.value,
+      userId: userId,
       name,
       instructions,
       type: productType,
