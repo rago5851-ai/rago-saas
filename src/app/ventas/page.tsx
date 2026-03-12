@@ -202,9 +202,11 @@ export default function VentasPage() {
 
       {/* ============ CHECKOUT MODAL ============ */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end justify-center" onClick={closeModal}>
-          <div className="w-full max-w-md bg-white rounded-t-3xl shadow-2xl overflow-y-auto max-h-[90vh]"
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={closeModal}>
+          <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[88vh]"
             onClick={e => e.stopPropagation()}>
+            {/* Scrollable inner area */}
+            <div className="overflow-y-auto flex-1">
 
             {step !== "SUCCESS" && (
               <>
@@ -305,7 +307,7 @@ export default function VentasPage() {
 
             {/* SUCCESS SCREEN */}
             {step === "SUCCESS" && successData && (
-              <div className="px-6 py-10 pb-32 flex flex-col items-center text-center relative">
+              <div className="px-6 py-6 pb-[140px] flex flex-col items-center text-center relative">
                 {/* X button on success screen */}
                 <button onClick={closeModal}
                   className="absolute top-4 right-4 h-8 w-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600">
@@ -339,6 +341,7 @@ export default function VentasPage() {
                 </Button>
               </div>
             )}
+            </div>{/* end scrollable inner */}
           </div>
         </div>
       )}
