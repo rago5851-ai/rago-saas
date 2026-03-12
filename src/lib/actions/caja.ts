@@ -46,11 +46,11 @@ export async function getCashRegisterState(dateFilter?: string) {
     }
 
     const salesSnap = await salesQuery.get()
-    console.log("[AUDIT] getCashRegisterState results", { 
+    console.log("[AUDIT] getCashRegisterState Results:", { 
       userId, 
-      docCount: salesSnap.size,
+      found: salesSnap.size,
       usingSessionStart: !!sessionStart,
-      usingDateFilter: !sessionStart && !!dateFilter
+      sessionStart: sessionStart?.toISOString()
     });
 
     let efectivo = retainedCash

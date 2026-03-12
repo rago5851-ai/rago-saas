@@ -1,5 +1,7 @@
 "use client"
 
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useState } from "react"
 import { getFormulas } from "@/lib/actions/formulas"
 import { getWorkOrders } from "@/lib/actions/production"
