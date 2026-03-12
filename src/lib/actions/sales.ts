@@ -84,3 +84,58 @@ export async function processCheckout(cart: CartItem[], paymentMethod: PaymentMe
     return { success: false, error: error.message || "Error al procesar el cobro" }
   }
 }
+
+export async function getSalesHistory(dateFilter?: string) {
+  try {
+    const cookieStore = await cookies()
+    const authCookie = cookieStore.get('auth_token')
+    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+
+    const snap = await db.collection("salesHistory")
+      .where("userId", "==", authCookie.value)
+      .get()
+
+    let sales = snap.docs
+      .map(doc => serializeDoc({ id: doc.id, ...doc.data() }))
+      .sort((a: any, b: any) => (b.createdAt || "").localeCompare(a.createdAt || ""))
+
+    // Filter by date if provided (YYYY-MM-DD in local time)
+    if (dateFilter) {
+      sales = sales.filter((s: any) => {
+        if (!s.createdAt) return false
+        return s.createdAt.slice(0, 10) === dateFilter
+      })
+    }
+
+    return { success: true, data: sales }
+  } catch (error: any) {
+    console.error("Error fetching sales history:", error?.message || error)
+    return { success: false, error: "No se pudo cargar el historial" }
+  }
+}
+
+export async function getDashboardStats() {
+  try {
+    const cookieStore = await cookies()
+    const authCookie = cookieStore.get('auth_token')
+    if (!authCookie?.value) return { success: false, error: "No autorizado" }
+
+    const snap = await db.collection("salesHistory")
+      .where("userId", "==", authCookie.value)
+      .get()
+
+    const allSales = snap.docs.map(doc => serializeDoc({ id: doc.id, ...doc.data() }))
+
+    // Today in UTC (ISO slice)
+    const todayUTC = new Date().toISOString().slice(0, 10)
+
+    const todaySales = allSales.filter((s: any) => s.createdAt?.slice(0, 10) === todayUTC)
+    const todayTotal = todaySales.reduce((sum: number, s: any) => sum + (s.total || 0), 0)
+    const todayCount = todaySales.length
+
+    return { success: true, data: { todayTotal: Math.round(todayTotal * 100) / 100, todayCount } }
+  } catch (error: any) {
+    console.error("Error fetching dashboard stats:", error?.message || error)
+    return { success: false, error: "Error al cargar estadísticas" }
+  }
+}

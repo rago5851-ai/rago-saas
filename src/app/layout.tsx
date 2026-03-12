@@ -6,8 +6,8 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Gestión de Fabricación",
-  description: "Producción y Costeo de Productos de Limpieza",
+  title: "Rago POS",
+  description: "Sistema de Punto de Venta",
 };
 
 export default function RootLayout({
