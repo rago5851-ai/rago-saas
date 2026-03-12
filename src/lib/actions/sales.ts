@@ -118,15 +118,15 @@ export async function getDashboardStats() {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
 
-    // Start of today in local time for the user (approximated as last 24h or relative to midnight)
-    // To be safe and since this is a dashboard, we show sales from the last 18 hours 
-    // or properly calculate the "today" boundary in a consistent way.
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0)
+    // Calculate today's boundaries in UTC (proven to work in getSalesHistory)
+    const todayISO = new Date().toLocaleDateString('en-CA');
+    const start = new Date(`${todayISO}T00:00:00Z`);
+    const end = new Date(`${todayISO}T23:59:59.999Z`);
 
     const snap = await db.collection("salesHistory")
       .where("userId", "==", userId)
-      .where("createdAt", ">=", today)
+      .where("createdAt", ">=", start)
+      .where("createdAt", "<=", end)
       .get()
 
     const todaySales = snap.docs.map(doc => doc.data())

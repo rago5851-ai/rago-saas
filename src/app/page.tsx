@@ -21,6 +21,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadData() {
+      setLoading(true)
       const [formulasRes, ordersRes, inventoryRes, statsRes] = await Promise.all([
         getFormulas(),
         getWorkOrders(),
@@ -31,10 +32,15 @@ export default function DashboardPage() {
       if (ordersRes.data) setOrders(ordersRes.data)
       if (inventoryRes.data) setInventory(inventoryRes.data)
       if (statsRes.success && statsRes.data) setStats(statsRes.data)
-      // Small delay for smoother transition
-      setTimeout(() => setLoading(false), 300)
+      setLoading(false)
     }
+    
     loadData()
+    
+    // Refresh data when window gets focus (real-time feel)
+    const onFocus = () => loadData()
+    window.addEventListener("focus", onFocus)
+    return () => window.removeEventListener("focus", onFocus)
   }, [])
 
   const finishedOrders = orders.filter((o: any) => o.status === 'FINISHED').length
