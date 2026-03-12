@@ -56,33 +56,33 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="flex-1 p-5 pb-24 space-y-5 mt-2 max-w-lg mx-auto w-full">
+      <main className="flex-1 p-5 pb-24 space-y-5 mt-6 max-w-lg mx-auto w-full">
         {/* Row 1: Fórmulas + Producción */}
         <section className="grid grid-cols-2 gap-4">
           <Link href="/formulas" className="block h-full">
             <Card className="border-none shadow-md hover:shadow-lg transition-all bg-[#2563eb] h-full rounded-2xl overflow-hidden relative group">
-              <CardContent className="p-5 flex flex-col items-center text-center relative z-10 h-full">
-                <div className="bg-white/15 p-2.5 rounded-xl mb-3 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
-                  <FlaskConical className="h-5 w-5 text-white" />
+              <CardContent className="p-4 flex flex-col items-center text-center relative z-10 h-full">
+                <div className="bg-white/15 p-2 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
+                  <FlaskConical className="h-4 w-4 text-white" />
                 </div>
-                <div className="text-2xl font-black text-white mb-0.5 tracking-tight">{formulas.length}</div>
-                <div className="text-[9px] font-black text-white/90 uppercase tracking-widest leading-tight">Fórmulas<br/>Registradas</div>
+                <div className="text-xl font-black text-white mb-0.5 tracking-tight">{formulas.length}</div>
+                <div className="text-[9px] font-bold text-white/90 uppercase tracking-widest leading-tight">Fórmulas</div>
               </CardContent>
-              <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/10 rounded-full blur-2xl"></div>
             </Card>
           </Link>
           <Link href="/production" className="block h-full">
             <Card className="border-none shadow-md hover:shadow-lg transition-all bg-[#2563eb] h-full rounded-2xl overflow-hidden relative group">
-              <CardContent className="p-5 flex flex-col items-center text-center relative z-10 h-full">
-                <div className="bg-white/15 p-2.5 rounded-xl mb-3 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
-                  <Boxes className="h-5 w-5 text-white" />
+              <CardContent className="p-4 flex flex-col items-center text-center relative z-10 h-full">
+                <div className="bg-white/15 p-2 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
+                  <Boxes className="h-4 w-4 text-white" />
                 </div>
-                <div className="text-2xl font-black text-white mb-0.5 tracking-tight">
+                <div className="text-xl font-black text-white mb-0.5 tracking-tight">
                   {orders.filter((o: any) => o.status === 'FINISHED').length}
                 </div>
-                <div className="text-[9px] font-black text-white/90 uppercase tracking-widest leading-tight">Lotes<br/>Completados</div>
+                <div className="text-[9px] font-bold text-white/90 uppercase tracking-widest leading-tight">Lotes</div>
               </CardContent>
-              <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/10 rounded-full blur-2xl"></div>
             </Card>
           </Link>
         </section>
@@ -91,29 +91,29 @@ export default function DashboardPage() {
         <section className="grid grid-cols-2 gap-4">
           <Link href="/historial" className="block h-full">
             <Card className="border-none shadow-md hover:shadow-lg transition-all bg-[#2563eb] h-full rounded-2xl overflow-hidden relative group">
-              <CardContent className="p-5 flex flex-col items-center text-center relative z-10 h-full">
-                <div className="bg-white/15 p-2.5 rounded-xl mb-3 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
-                  <TrendingUp className="h-5 w-5 text-white" />
+              <CardContent className="p-4 flex flex-col items-center text-center relative z-10 h-full">
+                <div className="bg-white/15 p-2 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
+                  <TrendingUp className="h-4 w-4 text-white" />
                 </div>
-                <div className="text-2xl font-black text-white mb-0.5 tracking-tight">
+                <div className="text-xl font-black text-white mb-0.5 tracking-tight">
                   ${stats?.todayTotal?.toFixed(2) ?? "0.00"}
                 </div>
-                <div className="text-[9px] font-black text-white/90 uppercase tracking-widest leading-tight">Ventas del Día</div>
-                <div className="text-[8px] text-white/70 mt-1 font-bold tracking-wider">{stats?.todayCount ?? 0} TRANSACCIONES</div>
+                <div className="text-[9px] font-bold text-white/90 uppercase tracking-widest leading-tight">Ventas</div>
+                <div className="text-[8px] text-white/70 mt-1 font-bold tracking-wider">{stats?.todayCount ?? 0} OPS</div>
               </CardContent>
-              <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/10 rounded-full blur-2xl"></div>
             </Card>
           </Link>
           <Link href="/caja" className="block h-full">
             <Card className="border-none shadow-md hover:shadow-lg transition-all bg-[#2563eb] h-full rounded-2xl overflow-hidden relative group">
-              <CardContent className="p-5 flex flex-col items-center justify-center text-center relative z-10 h-full min-h-[140px]">
-                <div className="bg-white/15 p-2.5 rounded-xl mb-3 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
-                  <Calculator className="h-5 w-5 text-white" />
+              <CardContent className="p-4 flex flex-col items-center justify-center text-center relative z-10 h-full min-h-[120px]">
+                <div className="bg-white/15 p-2 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
+                  <Calculator className="h-4 w-4 text-white" />
                 </div>
-                <div className="text-base font-black text-white tracking-tight uppercase">Corte de Caja</div>
-                <div className="text-[8px] text-white/70 mt-1 uppercase font-black tracking-[0.2em]">Ver caja actual</div>
+                <div className="text-sm font-black text-white tracking-tight uppercase">Caja</div>
+                <div className="text-[8px] text-white/70 mt-1 uppercase font-black tracking-[0.2em]">Ver actual</div>
               </CardContent>
-              <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/10 rounded-full blur-2xl"></div>
             </Card>
           </Link>
         </section>
