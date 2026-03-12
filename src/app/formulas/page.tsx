@@ -67,30 +67,30 @@ export default function FormulasPage() {
             const costPerLiter = baseLiters > 0 ? (rawCost / baseLiters).toFixed(2) : "0.00"
 
             return (
-              <Card key={f.id} className="overflow-hidden border-gray-100 shadow-sm transition-all hover:shadow-md">
+              <Card key={f.id} className="overflow-hidden bg-white border-none rounded-2xl shadow-md hover:shadow-lg transition-all">
                 <div 
-                  className="flex justify-between p-4 pb-2 cursor-pointer transition-colors hover:bg-gray-50 active:bg-gray-100"
+                  className="flex justify-between p-5 pb-4 cursor-pointer transition-colors bg-white group"
                   onClick={() => setExpandedId(expandedId === f.id ? null : f.id)}
                 >
-                  <div className="font-semibold text-gray-900 text-lg">{f.name}</div>
+                  <div className="font-extrabold text-black text-lg leading-tight tracking-tight group-hover:text-blue-600 transition-colors">{f.name}</div>
                   <div className="flex flex-col items-end">
-                    <span className="text-xs font-semibold bg-gray-100 text-gray-600 px-2 rounded-full py-0.5">
-                      v{f.version}
+                    <span className="text-[10px] font-black bg-blue-50 text-[#007bff] px-2.5 rounded-full py-0.5 border border-blue-100">
+                      V{f.version}
                     </span>
                   </div>
                 </div>
                 
-                <CardContent className="px-4 py-3 pt-0 bg-gray-50/50 mt-2 border-t border-b">
-                  <div className="grid grid-cols-2 gap-4 mt-2">
+                <CardContent className="px-5 py-4 bg-[#007bff] border-y border-blue-600/20 shadow-inner">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                      <span className="text-[10px] font-black text-blue-100 uppercase tracking-widest flex items-center gap-1 opacity-90">
                         <TrendingUp className="h-3 w-3" /> Rendimiento Base
                       </span>
-                      <span className="text-sm text-gray-700 font-medium">{baseLiters.toFixed(2)} L ({baseKg.toFixed(2)}kg)</span>
+                      <span className="text-sm text-white font-black">{baseLiters.toFixed(2)} <span className="text-[10px] font-medium opacity-80">L</span> <span className="text-[10px] font-medium opacity-60">({baseKg.toFixed(2)}kg)</span></span>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Costo por Litro</span>
-                      <span className="text-sm text-indigo-600 font-bold">${costPerLiter}/L</span>
+                    <div className="flex flex-col border-l border-white/20 pl-4">
+                      <span className="text-[10px] font-black text-blue-100 uppercase tracking-widest opacity-90">Costo por Litro</span>
+                      <span className="text-base text-white font-black leading-none">${costPerLiter}<span className="text-[10px] font-medium opacity-80">/L</span></span>
                     </div>
                   </div>
                 </CardContent>
@@ -117,16 +117,18 @@ export default function FormulasPage() {
                   </div>
                 )}
 
-                <div className="px-4 py-2 bg-gray-50 flex justify-between items-center text-xs text-gray-500">
+                <div className="px-4 py-3 bg-white flex justify-between items-center bg-white">
                    <div 
-                     className="flex items-center gap-1 cursor-pointer hover:text-gray-700"
+                     className="flex items-center gap-1.5 cursor-pointer text-[#007bff] hover:text-blue-700 font-bold text-xs transition-colors"
                      onClick={() => setExpandedId(expandedId === f.id ? null : f.id)}
                    >
-                      <FileText className="h-3 w-3" /> 
+                      <FileText className="h-4 w-4" /> 
                       {expandedId === f.id ? "Ocultar Detalles" : `Ver ${f.FormulaIngredients.length} Insumos`}
                    </div>
                    <Link href={`/production/new?formulaId=${f.id}`}>
-                      <Button variant="ghost" className="text-indigo-600 h-8 font-medium hover:bg-indigo-50 hover:text-indigo-700">Preparar Lote</Button>
+                      <Button variant="ghost" className="text-[#007bff] h-9 font-black hover:bg-blue-50 transition-all border border-blue-100 rounded-xl px-4">
+                        Preparar Lote
+                      </Button>
                    </Link>
                 </div>
               </Card>
