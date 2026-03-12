@@ -22,11 +22,12 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadData() {
       setLoading(true)
+      const todayISO = new Date().toLocaleDateString('en-CA')
       const [formulasRes, ordersRes, inventoryRes, statsRes] = await Promise.all([
         getFormulas(),
         getWorkOrders(),
         getRawMaterials(),
-        getDashboardStats(),
+        getDashboardStats(todayISO),
       ])
       if (formulasRes.data) setFormulas(formulasRes.data)
       if (ordersRes.data) setOrders(ordersRes.data)

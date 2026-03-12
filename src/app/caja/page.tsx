@@ -24,7 +24,8 @@ export default function CajaPage() {
 
   const loadCaja = () => {
     setLoading(true)
-    getCashRegisterState().then(res => {
+    const todayISO = new Date().toLocaleDateString('en-CA')
+    getCashRegisterState(todayISO).then(res => {
       if (res.success && res.data) setCaja(res.data as CajaState)
       setTimeout(() => setLoading(false), 300)
     })

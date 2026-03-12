@@ -113,21 +113,34 @@ export async function getSalesHistory(dateFilter?: string) {
   }
 }
 
-export async function getDashboardStats() {
+export async function getDashboardStats(dateFilter?: string) {
   try {
     const userId = await getUserId()
-    if (!userId) return { success: false, error: "No autorizado" }
+    if (!userId) {
+      console.error("[AUDIT] getDashboardStats: No userId found");
+      return { success: false, error: "No autorizado" }
+    }
 
-    // Calculate today's boundaries in UTC (proven to work in getSalesHistory)
-    const todayISO = new Date().toLocaleDateString('en-CA');
-    const start = new Date(`${todayISO}T00:00:00Z`);
-    const end = new Date(`${todayISO}T23:59:59.999Z`);
+    let query = db.collection("salesHistory").where("userId", "==", userId)
 
-    const snap = await db.collection("salesHistory")
-      .where("userId", "==", userId)
-      .where("createdAt", ">=", start)
-      .where("createdAt", "<=", end)
-      .get()
+    if (dateFilter) {
+      const start = new Date(`${dateFilter}T00:00:00Z`)
+      const end = new Date(`${dateFilter}T23:59:59.999Z`)
+      query = query.where("createdAt", ">=", start).where("createdAt", "<=", end)
+    } else {
+      // Fallback to server's today if no filter provided
+      const todayISO = new Date().toLocaleDateString('en-CA');
+      const start = new Date(`${todayISO}T00:00:00Z`);
+      const end = new Date(`${todayISO}T23:59:59.999Z`);
+      query = query.where("createdAt", ">=", start).where("createdAt", "<=", end)
+    }
+
+    const snap = await query.get()
+    console.log("[AUDIT] getDashboardStats results", { 
+      userId, 
+      dateFilter: dateFilter || "server-default", 
+      docCount: snap.size 
+    });
 
     const todaySales = snap.docs.map(doc => doc.data())
     const todayTotal = todaySales.reduce((sum: number, s: any) => sum + (s.total || 0), 0)
@@ -135,7 +148,7 @@ export async function getDashboardStats() {
 
     return { success: true, data: { todayTotal: Math.round(todayTotal * 100) / 100, todayCount } }
   } catch (error: any) {
-    console.error("Error fetching dashboard stats:", error?.message || error)
+    console.error("Error fetching dashboard stats [FULL ERROR]:", error)
     return { success: false, error: "Error al cargar estadísticas" }
   }
 }

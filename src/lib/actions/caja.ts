@@ -6,10 +6,13 @@ import { serializeDoc } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
 import { getUserId } from "@/lib/auth-utils"
 
-export async function getCashRegisterState() {
+export async function getCashRegisterState(dateFilter?: string) {
   try {
     const userId = await getUserId()
-    if (!userId) return { success: false, error: "No autorizado" }
+    if (!userId) {
+      console.error("[AUDIT] getCashRegisterState: No userId found");
+      return { success: false, error: "No autorizado" }
+    }
 
     // 1. Encontrar el corte de caja más reciente
     const cutsSnap = await db.collection("cashCuts")
@@ -18,7 +21,7 @@ export async function getCashRegisterState() {
       .limit(1)
       .get()
     
-    console.log("[AUDIT] getCashRegisterState lastCut query", { userId, empty: cutsSnap.empty });
+    console.log("[AUDIT] getCashRegisterState: Checking for recent cuts", { userId, hasCut: !cutsSnap.empty });
 
     let sessionStart: Date | null = null
     let retainedCash = 0
@@ -26,17 +29,29 @@ export async function getCashRegisterState() {
       const lastCut = cutsSnap.docs[0].data()
       sessionStart = lastCut.createdAt?.toDate() || null
       retainedCash = lastCut.cashRetained || 0
+      console.log("[AUDIT] getCashRegisterState: Found last cut", { sessionStart, retainedCash });
     }
 
-    // 2. Traer ventas filtradas desde el servidor (User + Fecha)
+    // 2. Traer ventas filtradas
     let salesQuery = db.collection("salesHistory").where("userId", "==", userId)
     
     if (sessionStart) {
+      // De lo que ha pasado desde el último corte
       salesQuery = salesQuery.where("createdAt", ">", sessionStart)
+    } else if (dateFilter) {
+      // Si no hay corte, al menos mostrar lo de 'hoy' (como en el historial)
+      const start = new Date(`${dateFilter}T00:00:00Z`)
+      const end = new Date(`${dateFilter}T23:59:59.999Z`)
+      salesQuery = salesQuery.where("createdAt", ">=", start).where("createdAt", "<=", end)
     }
 
     const salesSnap = await salesQuery.get()
-    console.log("[AUDIT] getCashRegisterState sales query", { userId, sessionStart, count: salesSnap.size });
+    console.log("[AUDIT] getCashRegisterState results", { 
+      userId, 
+      docCount: salesSnap.size,
+      usingSessionStart: !!sessionStart,
+      usingDateFilter: !sessionStart && !!dateFilter
+    });
 
     let efectivo = retainedCash
     let tarjeta = 0
