@@ -6,8 +6,9 @@ import { getWorkOrders } from "@/lib/actions/production"
 import { getRawMaterials } from "@/lib/actions/inventory"
 import { getDashboardStats } from "@/lib/actions/sales"
 import { Card, CardContent } from "@/components/ui/card"
-import { History, AlertTriangle, ArrowRight, Activity, TrendingUp, Calculator } from "lucide-react"
+import { History, ArrowRight, Activity, TrendingUp, Calculator, FlaskConical, Boxes } from "lucide-react"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 export default function DashboardPage() {
   const [formulas, setFormulas] = useState<any[]>([])
@@ -57,51 +58,35 @@ export default function DashboardPage() {
 
       <main className="flex-1 p-4 pb-24 space-y-6 mt-2">
 
-        {/* Low-stock alerts */}
-        {lowStockMaterials.length > 0 && (
-          <section>
-            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2 pl-1">Alertas de Inventario</h3>
-            <div className="space-y-2">
-              {lowStockMaterials.map((m: any) => (
-                <Link href="/inventory" key={m.id} className="block">
-                  <Card className="bg-red-50/80 border-red-100 shadow-sm">
-                    <CardContent className="p-3 flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-red-100 p-2 rounded-full text-red-600">
-                          <AlertTriangle className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-red-900 text-sm leading-tight">{m.name}</p>
-                          <p className="text-xs text-red-700 font-medium">Stock crítico: {m.stockKg} kg</p>
-                        </div>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-red-400" />
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* Row 1: Fórmulas + Producción */}
         <section className="grid grid-cols-2 gap-3">
           <Link href="/formulas" className="block">
-            <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow bg-white h-full">
-              <CardContent className="p-4 flex flex-col justify-center items-center text-center mt-2">
-                <div className="text-3xl font-black text-indigo-600 mb-1">{formulas.length}</div>
-                <div className="text-[10px] font-bold text-gray-500 uppercase">Fórmulas<br/>Registradas</div>
+            <Card className="border-none shadow-lg hover:shadow-xl transition-all bg-[#007bff] h-full overflow-hidden relative group">
+              <CardContent className="p-5 flex flex-col justify-center items-center text-center mt-2 relative z-10">
+                <div className="bg-white/20 p-2 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                  <FlaskConical className="h-6 w-6 text-white" />
+                </div>
+                <div className="text-3xl font-black text-white mb-1 drop-shadow-sm">{formulas.length}</div>
+                <div className="text-[10px] font-bold text-white/90 uppercase tracking-wider">Fórmulas<br/>Registradas</div>
               </CardContent>
+              {/* Subtle glass effect highlight */}
+              <div className="absolute -top-10 -right-10 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
             </Card>
           </Link>
           <Link href="/production" className="block">
-            <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow bg-white h-full">
-              <CardContent className="p-4 flex flex-col justify-center items-center text-center mt-2">
-                <div className="text-3xl font-black text-green-600 mb-1">
+            <Card className="border-none shadow-lg hover:shadow-xl transition-all bg-[#8A2BE2] h-full overflow-hidden relative group">
+              <CardContent className="p-5 flex flex-col justify-center items-center text-center mt-2 relative z-10">
+                <div className="bg-white/20 p-2 rounded-xl mb-2 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                  <Boxes className="h-6 w-6 text-white" />
+                </div>
+                <div className="text-3xl font-black text-white mb-1 drop-shadow-sm">
                   {orders.filter((o: any) => o.status === 'FINISHED').length}
                 </div>
-                <div className="text-[10px] font-bold text-gray-500 uppercase">Lotes<br/>Completados</div>
+                <div className="text-[10px] font-bold text-white/90 uppercase tracking-wider">Lotes<br/>Completados</div>
               </CardContent>
+              {/* Subtle glass effect highlight */}
+              <div className="absolute -top-10 -right-10 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
             </Card>
           </Link>
         </section>
