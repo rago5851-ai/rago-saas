@@ -36,6 +36,7 @@ export async function processCheckout(cart: CartItem[], paymentMethod: PaymentMe
     if (!cart || cart.length === 0) return { success: false, error: "El carrito está vacío" }
 
     const total = cart.reduce((s, i) => s + i.quantity * i.pricePerLiter, 0)
+    console.log("[AUDIT] processCheckout START", { userId, cartSize: cart.length, total, paymentMethod });
 
     await db.runTransaction(async (transaction: any) => {
       const refs = cart.map(item => db.collection("productInventory").doc(item.productId))
@@ -68,7 +69,10 @@ export async function processCheckout(cart: CartItem[], paymentMethod: PaymentMe
         change: paymentMethod === "EFECTIVO" ? Math.round((amountPaid - total) * 100) / 100 : 0,
         createdAt: new Date(),
       })
+      console.log("[AUDIT] Transaction set saleRef", saleRef.id);
     })
+
+    console.log("[AUDIT] processCheckout SUCCESS", { userId });
 
     revalidatePath("/ventas")
     revalidatePath("/historial")
@@ -98,13 +102,14 @@ export async function getSalesHistory(dateFilter?: string) {
     }
 
     const snap = await query.orderBy("createdAt", "desc").get()
+    console.log("[AUDIT] getSalesHistory", { userId, dateFilter, count: snap.size });
 
     const sales = snap.docs.map(doc => serializeDoc({ id: doc.id, ...doc.data() }))
 
     return { success: true, data: sales }
   } catch (error: any) {
-    console.error("Error fetching sales history:", error?.message || error)
-    return { success: false, error: "No se pudo cargar el historial" }
+    console.error("Error fetching sales history [FULL ERROR]:", error);
+    return { success: false, error: "No se pudo cargar el historial. Revisa los logs para errores de índices." }
   }
 }
 

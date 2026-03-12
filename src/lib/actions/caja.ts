@@ -17,6 +17,8 @@ export async function getCashRegisterState() {
       .orderBy("createdAt", "desc")
       .limit(1)
       .get()
+    
+    console.log("[AUDIT] getCashRegisterState lastCut query", { userId, empty: cutsSnap.empty });
 
     let sessionStart: Date | null = null
     let retainedCash = 0
@@ -34,6 +36,7 @@ export async function getCashRegisterState() {
     }
 
     const salesSnap = await salesQuery.get()
+    console.log("[AUDIT] getCashRegisterState sales query", { userId, sessionStart, count: salesSnap.size });
 
     let efectivo = retainedCash
     let tarjeta = 0
@@ -60,8 +63,8 @@ export async function getCashRegisterState() {
       }
     }
   } catch (error: any) {
-    console.error("Error fetching cash register:", error?.message || error)
-    return { success: false, error: "No se pudo cargar la caja" }
+    console.error("Error fetching cash register [FULL ERROR]:", error);
+    return { success: false, error: "No se pudo cargar la caja. Posible error de índice." }
   }
 }
 
@@ -86,6 +89,8 @@ export async function processCashCut(
       cashRetained: Math.round(cashRetained * 100) / 100,
       createdAt: new Date(),
     })
+
+    console.log("[AUDIT] processCashCut SUCCESS", { userId, expectedEfectivo, manualCount, withdraw });
 
     revalidatePath("/caja")
     revalidatePath("/")
