@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/lib/firebase"
+import { serializeDoc } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 
@@ -22,27 +23,27 @@ export async function getFormulas() {
       
     const rawMaterialsMap = new Map()
     rawMaterialsSnapshot.docs.forEach(doc => {
-      rawMaterialsMap.set(doc.id, { id: doc.id, ...doc.data() })
+      rawMaterialsMap.set(doc.id, serializeDoc({ id: doc.id, ...doc.data() }))
     })
 
     const formulas = formulasSnapshot.docs
       .map(doc => {
-        const data = doc.data()
+        const rawData = doc.data()
+        const serialized = serializeDoc({ id: doc.id, ...rawData })
         return {
-          id: doc.id,
-          ...data,
-          FormulaIngredients: (data.ingredients || []).map((ing: any) => ({
+          ...serialized,
+          FormulaIngredients: (rawData.ingredients || []).map((ing: any) => ({
             rawMaterialId: ing.rawMaterialId,
             quantityKg: ing.quantityKg,
             rawMaterial: rawMaterialsMap.get(ing.rawMaterialId) || null
           }))
         }
       })
-      // Sort in memory: más recientes primero
+      // Sort in-memory by updatedAt ISO string (desc)
       .sort((a: any, b: any) => {
-        const aDate = a.updatedAt?.toDate?.() || new Date(a.updatedAt || 0)
-        const bDate = b.updatedAt?.toDate?.() || new Date(b.updatedAt || 0)
-        return bDate.getTime() - aDate.getTime()
+        const aStr = a.updatedAt || ""
+        const bStr = b.updatedAt || ""
+        return bStr.localeCompare(aStr)
       })
 
     return { success: true, data: formulas }

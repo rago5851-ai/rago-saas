@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/lib/firebase"
+import { serializeDoc } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 
@@ -20,14 +21,14 @@ export async function getWorkOrders() {
     const rawMaterialsSnapshot = await db.collection("rawMaterials").where("userId", "==", authCookie.value).get()
     
     const rawMaterialsMap = new Map()
-    rawMaterialsSnapshot.docs.forEach(doc => rawMaterialsMap.set(doc.id, { id: doc.id, ...doc.data() }))
+    rawMaterialsSnapshot.docs.forEach(doc => rawMaterialsMap.set(doc.id, serializeDoc({ id: doc.id, ...doc.data() })))
 
     const formulasMap = new Map()
     formulasSnapshot.docs.forEach(doc => {
       const data = doc.data()
+      const serialized = serializeDoc({ id: doc.id, ...data })
       formulasMap.set(doc.id, {
-        id: doc.id,
-        ...data,
+        ...serialized,
         FormulaIngredients: (data.ingredients || []).map((ing: any) => ({
           rawMaterialId: ing.rawMaterialId,
           quantityKg: ing.quantityKg,
@@ -39,22 +40,22 @@ export async function getWorkOrders() {
     const orders = ordersSnapshot.docs
       .map(doc => {
         const data = doc.data()
+        const serialized = serializeDoc({ id: doc.id, ...data })
         return {
-          id: doc.id,
-          ...data,
+          ...serialized,
           formula: formulasMap.get(data.formulaId) || null
         }
       })
-      // Sort in memory: más recientes primero
+      // Sort in-memory by createdAt ISO string (desc)
       .sort((a: any, b: any) => {
-        const aDate = a.createdAt?.toDate?.() || new Date(a.createdAt || 0)
-        const bDate = b.createdAt?.toDate?.() || new Date(b.createdAt || 0)
-        return bDate.getTime() - aDate.getTime()
+        const aStr = a.createdAt || ""
+        const bStr = b.createdAt || ""
+        return bStr.localeCompare(aStr)
       })
 
     return { success: true, data: orders }
-  } catch (error) {
-    console.error("Error fetching work orders:", error)
+  } catch (error: any) {
+    console.error("Error fetching work orders:", error?.message || error)
     return { success: false, error: "No se pudieron cargar las órdenes" }
   }
 }

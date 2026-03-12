@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/lib/firebase"
+import { serializeDoc } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 
@@ -14,14 +15,14 @@ export async function getRawMaterials() {
                              .where("userId", "==", authCookie.value)
                              .get()
 
-    // Sort in memory to avoid needing a Firestore composite index
+    // Sort in memory, convert Timestamps to strings before returning to client
     const materials = snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .map(doc => serializeDoc({ id: doc.id, ...doc.data() }))
       .sort((a: any, b: any) => a.name.localeCompare(b.name))
 
     return { success: true, data: materials }
-  } catch (error) {
-    console.error("Error fetching materials:", error)
+  } catch (error: any) {
+    console.error("Error fetching materials:", error?.message || error)
     return { success: false, error: "No se pudieron cargar los insumos" }
   }
 }
