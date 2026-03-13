@@ -140,18 +140,6 @@ export async function getDashboardStats(dateFilter?: string) {
       totalUserDocs: snap.size,
       foundToday: todaySales.length
     });
-    
-    // DEBUG: Get a sample of documents to see why they might not match
-    const sample = snap.docs.length > 0 ? snap.docs[0].data() : "NO_DOCS_FOUND";
-    
-    console.log("[AUDIT] getDashboardStats Results:", { 
-      userId, 
-      dateFilter: dateFilter || "server-default", 
-      found: snap.size,
-      firstDocSample: sample
-    });
-
-    const todaySales = snap.docs.map(doc => doc.data())
     const todayTotal = todaySales.reduce((sum: number, s: any) => sum + (s.total || 0), 0)
     const todayCount = todaySales.length
 
