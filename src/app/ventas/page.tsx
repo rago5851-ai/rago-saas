@@ -104,7 +104,12 @@ export default function VentasPage() {
     setCart(prev => {
       const item = prev[id]
       if (!item) return prev
-      const newQty = Math.max(0.1, item.qty + delta)
+      const newQty = item.qty + delta
+      if (newQty <= 0) {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      }
       return { ...prev, [id]: { ...item, qty: newQty } }
     })
   }
@@ -332,42 +337,43 @@ export default function VentasPage() {
                   >
                     <div className="px-4 py-3 flex items-center justify-between gap-4">
                       {/* Información Izquierda */}
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-gray-900 text-[13px] leading-tight uppercase truncate">{i.product.name}</p>
-                        <p className={`text-[9px] font-black mt-0.5 tracking-wider uppercase ${i.qty > i.product.stockLiters ? 'text-red-500' : 'text-gray-400'}`}>
+                      <div className="min-w-0 flex-1 py-1">
+                        <p className="font-black text-gray-900 text-xs leading-tight uppercase break-words">
+                          {i.product.name}
+                        </p>
+                        <p className={`text-[9px] font-bold mt-1 tracking-wider uppercase ${i.qty > i.product.stockLiters ? 'text-red-500' : 'text-gray-500'}`}>
                           ${i.product.salePrice.toFixed(2)}/L · {i.product.stockLiters.toFixed(1)}L Disp.
                         </p>
                       </div>
 
                       {/* Controles Derecha (Compactos) */}
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="flex items-center bg-gray-50 rounded-xl p-0.5 border border-gray-100">
+                      <div className="flex items-center gap-4 shrink-0">
+                        <div className="flex items-center bg-gray-50 rounded-xl p-1 border border-gray-100 shadow-inner">
                           <button 
                             onClick={() => updateQty(i.product.id, -1)}
-                            className="h-7 w-7 rounded-lg bg-white flex items-center justify-center text-gray-600 shadow-sm active:scale-95 transition-all"
+                            className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all ${i.qty <= 1 ? 'bg-red-50 text-red-500 hover:bg-red-100' : 'bg-white text-gray-700 shadow-sm'}`}
                           >
-                            <Minus className="h-3.5 w-3.5" />
+                            {i.qty <= 1 ? <Trash2 className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
                           </button>
-                          <span className="w-10 text-center font-black text-gray-900 text-xs tabular-nums">{i.qty.toFixed(1)}</span>
+                          
+                          <span className="w-10 text-center font-black text-gray-900 text-sm tabular-nums">
+                            {i.qty.toFixed(0)}
+                          </span>
+
                           <button 
                             onClick={() => updateQty(i.product.id, 1)}
                             disabled={i.qty >= i.product.stockLiters}
-                            className="h-7 w-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-200 active:scale-95 transition-all disabled:bg-gray-200 disabled:shadow-none"
+                            className="h-8 w-8 rounded-lg bg-indigo-700 flex items-center justify-center text-white shadow-md shadow-indigo-200 active:scale-95 transition-all disabled:bg-gray-200 disabled:shadow-none"
                           >
-                            <Plus className="h-3.5 w-3.5" />
+                            <Plus className="h-4 w-4" />
                           </button>
                         </div>
                         
-                        <div className="text-right min-w-[60px]">
-                          <p className="text-[11px] font-black text-indigo-700 tabular-nums">${(i.qty * i.product.salePrice).toFixed(2)}</p>
+                        <div className="text-right min-w-[70px]">
+                          <p className="text-sm font-black text-blue-700 tabular-nums">
+                            ${(i.qty * i.product.salePrice).toFixed(2)}
+                          </p>
                         </div>
-
-                        <button 
-                          onClick={() => removeFromCart(i.product.id)}
-                          className="h-8 w-8 flex items-center justify-center rounded-xl bg-red-50 text-red-400 hover:text-red-600 transition-colors"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
                       </div>
                     </div>
                   </motion.div>
