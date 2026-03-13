@@ -15,19 +15,20 @@ export async function getCashRegisterState(dateFilter?: string) {
       return { success: false, error: "No autorizado" }
     }
 
-    // 1. Encontrar el corte de caja más reciente
+    // 1. Encontrar el corte de caja más reciente (Sin orderBy para evitar índice)
     const cutsSnap = await db.collection("cashCuts")
       .where("userId", "==", userId)
-      .orderBy("createdAt", "desc")
-      .limit(1)
       .get()
     
-    console.log("[AUDIT] getCashRegisterState: Checking for recent cuts", { userId, hasCut: !cutsSnap.empty });
+    // Ordenar en memoria
+    const sortedCuts = cutsSnap.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .sort((a: any, b: any) => (b.createdAt?.toDate().getTime() || 0) - (a.createdAt?.toDate().getTime() || 0))
 
     let sessionStart: Date | null = null
     let retainedCash = 0
-    if (!cutsSnap.empty) {
-      const lastCut = cutsSnap.docs[0].data()
+    if (sortedCuts.length > 0) {
+      const lastCut: any = sortedCuts[0]
       sessionStart = lastCut.createdAt?.toDate() || null
       retainedCash = lastCut.cashRetained || 0
       console.log("[AUDIT] getCashRegisterState: Found last cut", { sessionStart, retainedCash });
@@ -40,24 +41,30 @@ export async function getCashRegisterState(dateFilter?: string) {
     // JS Filtering using Merida Timezone
     const { start, end, dateStr } = getMeridaDayRange(dateFilter)
 
+    // Lógica de Sincronización: 
+    // Si no hay corte hoy, empezamos desde las 00:00:00 de hoy Merida.
+    // Si hay un corte hoy, empezamos desde ese corte.
+    let effectiveStart = start;
+    if (sessionStart && sessionStart > start) {
+      effectiveStart = sessionStart;
+      console.log("[AUDIT] Caja: Usando corte reciente como inicio", { sessionStart });
+    } else {
+      console.log("[AUDIT] Caja: Usando inicio de día (Hoy) como inicio", { start });
+    }
+
     const filteredDocs = salesSnap.docs.filter(doc => {
       const data = doc.data()
       if (!data.createdAt) return false
       const createdAt = data.createdAt.toDate()
-      
-      if (sessionStart) {
-        return createdAt > sessionStart
-      } else {
-        return createdAt >= start && createdAt <= end
-      }
+      return createdAt >= effectiveStart && createdAt <= end
     })
 
     console.log("[AUDIT] getCashRegisterState JS results", { 
       userId, 
       totalUserDocs: salesSnap.size,
       foundFiltered: filteredDocs.length,
-      usingSessionStart: !!sessionStart,
-      dateFilter: dateStr
+      range: { start: effectiveStart, end },
+      dateStr
     });
 
     let efectivo = retainedCash
