@@ -55,6 +55,9 @@ export default function ClientesPage() {
       const res = await getLoyaltyConfig()
       if (res.success && res.data) {
         setLoyaltyConfig(res.data as LoyaltyConfig)
+      } else {
+        // Fallback robusto al cargar
+        setLoyaltyConfig({ pointsPerSaleAmount: 100, pointValue: 1 })
       }
     }
     fetchConfig()
@@ -101,9 +104,13 @@ export default function ClientesPage() {
                 const res = await getLoyaltyConfig()
                 if (res.success && res.data) {
                   setLoyaltyConfig(res.data as LoyaltyConfig)
+                } else if (!loyaltyConfig) {
+                  // Solo poner default si no teníamos nada previo
+                  setLoyaltyConfig({ pointsPerSaleAmount: 100, pointValue: 1 })
                 }
               } catch (err) {
                 console.error("[LOYALTY] Client-side fetch error:", err)
+                if (!loyaltyConfig) setLoyaltyConfig({ pointsPerSaleAmount: 100, pointValue: 1 })
               } finally {
                 clearTimeout(timer)
                 setLoadingConfig(false)

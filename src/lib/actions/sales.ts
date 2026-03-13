@@ -75,9 +75,9 @@ export async function updateLoyaltyConfig(config: LoyaltyConfig) {
       updatedAt: new Date()
     }
 
-    console.log("[LOYALTY] Saving config to 'configuracion/${userId}_lealtad':", dataToSave)
+    console.log("[LOYALTY] Saving config with merge:true to 'configuracion/${userId}_lealtad':", dataToSave)
     
-    await db.collection("configuracion").doc(`${userId}_lealtad`).set(dataToSave)
+    await db.collection("configuracion").doc(`${userId}_lealtad`).set(dataToSave, { merge: true })
     
     revalidatePath("/ventas")
     revalidatePath("/clientes")
