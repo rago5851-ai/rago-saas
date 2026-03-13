@@ -9,7 +9,7 @@ import { getRawMaterials } from "@/lib/actions/inventory"
 import { getDashboardStats } from "@/lib/actions/sales"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { History, ArrowRight, Activity, TrendingUp, Calculator, FlaskConical, Boxes, Users, BarChart3, LogOut } from "lucide-react"
+import { History, ArrowRight, Activity, TrendingUp, Calculator, FlaskConical, Boxes, Users, BarChart3, LogOut, Factory } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
@@ -123,29 +123,15 @@ export default function DashboardPage() {
                 </Card>
               </Link>
 
-              {/* Inventario (Lotes) */}
-              <Link href="/production" className="block">
+              {/* Fabricación (New Hub) */}
+              <Link href="/fabricacion" className="block">
                 <Card className="border-none shadow-lg bg-[#2563eb] h-full min-h-[120px] rounded-2xl overflow-hidden relative group">
                   <CardContent className="p-4 flex flex-col items-center text-center relative z-10 h-full">
                     <div className="bg-white/15 p-2 rounded-xl mb-1.5 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
-                      <Boxes className="h-4 w-4 text-white" />
+                      <Factory className="h-4 w-4 text-white" />
                     </div>
                     <div className="text-lg font-black text-white mb-0.5 tracking-tight">{finishedOrders}</div>
-                    <div className="text-[9px] font-bold text-white/90 uppercase tracking-widest leading-tight">Inventario</div>
-                  </CardContent>
-                  <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/10 rounded-full blur-2xl"></div>
-                </Card>
-              </Link>
-
-              {/* Fórmulas */}
-              <Link href="/formulas" className="block">
-                <Card className="border-none shadow-lg bg-[#2563eb] h-full min-h-[120px] rounded-2xl overflow-hidden relative group">
-                  <CardContent className="p-4 flex flex-col items-center text-center relative z-10 h-full">
-                    <div className="bg-white/15 p-2 rounded-xl mb-1.5 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
-                      <FlaskConical className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="text-lg font-black text-white mb-0.5 tracking-tight">{formulas.length}</div>
-                    <div className="text-[9px] font-bold text-white/90 uppercase tracking-widest leading-tight">Fórmulas</div>
+                    <div className="text-[9px] font-bold text-white/90 uppercase tracking-widest leading-tight">Fabricación</div>
                   </CardContent>
                   <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/10 rounded-full blur-2xl"></div>
                 </Card>

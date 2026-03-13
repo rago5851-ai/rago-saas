@@ -6,9 +6,6 @@ import { Package, Beaker, ClipboardList, ShoppingBag, Home } from "lucide-react"
 
 const navItems = [
   { href: "/", label: "Inicio", Icon: Home },
-  { href: "/inventory", label: "Bodega", Icon: Package },
-  { href: "/formulas", label: "Fórmulas", Icon: Beaker },
-  { href: "/production", label: "Producción", Icon: ClipboardList },
   { href: "/ventas", label: "Ventas", Icon: ShoppingBag },
 ];
 
