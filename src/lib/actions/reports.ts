@@ -124,7 +124,7 @@ export async function getTopProducts(range: string, customStart?: string, custom
             productStats[name] = { count: 0, revenue: 0 }
           }
           const quantity = Number(item.quantity) || 1
-          const price = Number(item.price) || 0
+          const price = Number(item.pricePerLiter) || Number(item.price) || 0
           productStats[name].count += quantity
           productStats[name].revenue += (quantity * price)
         })
