@@ -61,7 +61,7 @@ export default function FabricacionPage() {
             </Link>
 
             {/* Producto Terminado */}
-            <Link href="/ventas">
+            <Link href="/production">
               <motion.button 
                 whileTap={{ scale: 0.98 }}
                 className="w-full bg-gray-50 p-5 rounded-2xl border-2 border-transparent hover:border-indigo-600 hover:bg-white transition-all group flex items-center gap-5 shadow-sm"
