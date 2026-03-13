@@ -121,7 +121,7 @@ export default function VentasPage() {
             animate={{ x: 0, opacity: 1 }}
           >
             <h1 className="text-xl font-black text-white tracking-tight">Punto de Venta</h1>
-            <p className="text-indigo-200 text-xs font-medium">Inventario de Productos Terminados</p>
+            <p className="text-indigo-200 text-[10px] font-bold uppercase tracking-widest">Atención a Clientes</p>
           </motion.div>
           {cartCount > 0 && (
             <motion.div 
@@ -134,15 +134,15 @@ export default function VentasPage() {
             </motion.div>
           )}
         </div>
-        <div className="relative">
-          <Input type="search" placeholder="Buscar producto..." value={search}
+        <div className="relative px-2">
+          <Input type="search" placeholder="Buscar producto (ej. Cloro)..." value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full h-11 pl-10 rounded-xl border-0 bg-white shadow-md text-gray-900 placeholder:text-gray-400 font-medium" />
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            className="w-full h-12 pl-11 rounded-2xl border-0 bg-white shadow-lg text-gray-900 placeholder:text-gray-400 font-bold" />
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
         </div>
       </header>
 
-      <main className="flex-1 p-4 pb-64 space-y-6">
+      <main className="flex-1 p-6 pb-64 space-y-8">
         {/* RESULTADOS DE BÚSQUEDA */}
         <AnimatePresence mode="wait">
           {search.trim() !== "" && (
@@ -150,29 +150,36 @@ export default function VentasPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-3"
+              className="space-y-4"
             >
-              <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Resultados</h2>
+              <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.15em] px-2 flex items-center gap-2">
+                <div className="h-1 w-1 rounded-full bg-indigo-400"/>
+                Resultados
+              </h2>
               {loading ? (
-                <Skeleton className="h-24 w-full rounded-2xl" />
+                <Skeleton className="h-20 w-full rounded-2xl" />
               ) : filtered.length === 0 ? (
-                <div className="p-4 bg-white rounded-2xl border border-dashed text-center text-gray-400 text-sm">
-                  No se encontraron productos con stock.
+                <div className="p-6 bg-white rounded-3xl border border-dashed border-gray-200 text-center text-gray-400 text-sm">
+                  No se encontraron productos disponibles.
                 </div>
               ) : (
                 filtered.map(p => (
-                  <div key={p.id} className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4 flex items-center justify-between gap-4">
+                  <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center justify-between gap-4 transition-all hover:border-indigo-100 active:scale-[0.98]">
                     <div className="min-w-0">
-                      <p className="font-black text-gray-900 truncate uppercase tracking-tight">{p.name}</p>
-                      <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">${p.salePrice.toFixed(2)} / Litro</p>
+                      <p className="font-black text-gray-900 uppercase tracking-tight leading-tight">{p.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">${p.salePrice.toFixed(2)} / L</span>
+                        <span className="text-gray-300">•</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{p.stockLiters.toFixed(1)} L disponibles</span>
+                      </div>
                     </div>
-                    <Button 
+                    <button 
                       onClick={() => addToCart(p)}
                       disabled={cart[p.id] !== undefined}
-                      className="h-10 w-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-md shrink-0"
+                      className="h-10 w-10 rounded-full bg-[#2563eb] hover:bg-blue-700 shadow-lg shadow-blue-500/30 flex items-center justify-center shrink-0 disabled:bg-gray-100 disabled:shadow-none transition-all active:scale-90"
                     >
-                      <Plus className="h-5 w-5" />
-                    </Button>
+                      <Plus className="h-5 w-5 text-white" />
+                    </button>
                   </div>
                 ))
               )}
@@ -181,11 +188,14 @@ export default function VentasPage() {
         </AnimatePresence>
 
         {/* VENTA ACTUAL (CARRITO) */}
-        <div className="space-y-4 pt-2">
+        <div className="space-y-5 pt-2">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-sm font-black text-gray-900 uppercase tracking-widest">Venta Actual</h2>
-            <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded-md uppercase">
-              {cartItems.length} Producto{cartItems.length !== 1 ? "s" : ""}
+            <h2 className="text-lg font-black text-gray-900 tracking-tight flex items-center gap-2">
+              Venta Actual
+              <span className="text-indigo-600 h-2 w-2 rounded-full bg-indigo-600 animate-pulse"/>
+            </h2>
+            <span className="bg-indigo-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-indigo-600/20">
+              {cartItems.length} {cartItems.length === 1 ? "ITEM" : "ITEMS"}
             </span>
           </div>
 
@@ -194,13 +204,16 @@ export default function VentasPage() {
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center p-12 text-center text-gray-400 bg-white rounded-3xl border border-dashed border-gray-200"
+                className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-[2.5rem] border border-dashed border-gray-200 shadow-sm"
               >
-                <ShoppingCart className="h-10 w-10 mb-3 opacity-20 text-indigo-600" />
-                <p className="text-sm font-medium">Usa el buscador para<br/>agregar productos a la venta</p>
+                <div className="h-16 w-16 rounded-full bg-gray-50 flex items-center justify-center mb-4">
+                  <ShoppingCart className="h-7 w-7 text-gray-200" />
+                </div>
+                <p className="text-sm font-bold text-gray-400">Tu lista está vacía</p>
+                <p className="text-[10px] text-gray-300 uppercase tracking-widest mt-1 font-bold">Usa el buscador para añadir productos</p>
               </motion.div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {cartItems.map(i => (
                   <motion.div
                     key={i.product.id}
@@ -208,50 +221,50 @@ export default function VentasPage() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className={`bg-white rounded-[2rem] border ${i.qty > i.product.stockLiters ? 'border-red-200' : 'border-gray-100'} shadow-sm overflow-hidden`}
+                    className={`bg-white rounded-[2rem] border-2 transition-all ${i.qty > i.product.stockLiters ? 'border-red-200 shadow-red-50' : 'border-transparent shadow-md shadow-gray-200/50'}`}
                   >
-                    <div className="px-5 py-4 flex flex-col gap-3">
+                    <div className="px-6 py-5 flex flex-col gap-4">
                       <div className="flex justify-between items-start gap-4">
                         <div className="flex-1">
-                          <p className="font-black text-gray-900 text-lg leading-tight uppercase tracking-tight">{i.product.name}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest ${i.qty > i.product.stockLiters ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                               Stock: {i.product.stockLiters.toFixed(2)} L
+                          <p className="font-black text-gray-900 text-xl leading-tight uppercase tracking-tight">{i.product.name}</p>
+                          <div className="flex items-center gap-3 mt-1.5 font-bold">
+                             <span className={`text-[10px] px-2.5 py-1 rounded-lg uppercase tracking-widest ${i.qty > i.product.stockLiters ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-100 text-gray-600'}`}>
+                               LITROS: {i.product.stockLiters.toFixed(2)}
                              </span>
-                             <span className="text-[10px] font-bold text-gray-400 tracking-wider">${i.product.salePrice.toFixed(2)}/L</span>
+                             <span className="text-[10px] text-indigo-400 tracking-[0.1em] uppercase">${i.product.salePrice.toFixed(2)} / L</span>
                           </div>
                         </div>
                         <button 
                           onClick={() => removeFromCart(i.product.id)}
-                          className="p-2.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                          className="p-3 rounded-2xl bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all active:scale-90"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                        <div className="flex items-center gap-4">
                           <button 
                             onClick={() => updateQty(i.product.id, -1)}
-                            className="h-10 w-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 active:scale-95 transition-all"
+                            className="h-11 w-11 rounded-2xl bg-[#EEF2FF] flex items-center justify-center text-[#2563eb] hover:bg-indigo-100 active:scale-95 transition-all shadow-sm shadow-indigo-100/50"
                           >
                             <Minus className="h-5 w-5" />
                           </button>
-                          <div className="flex flex-col items-center min-w-[60px]">
-                            <span className="text-xl font-black text-gray-900">{i.qty.toFixed(2)}</span>
-                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Litros</span>
+                          <div className="flex flex-col items-center min-w-[70px]">
+                            <span className="text-2xl font-black text-gray-900 tabular-nums">{i.qty.toFixed(2)}</span>
+                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] -mt-1">Litros</span>
                           </div>
                           <button 
                             onClick={() => updateQty(i.product.id, 1)}
                             disabled={i.qty >= i.product.stockLiters}
-                            className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white hover:bg-indigo-700 active:scale-95 transition-all disabled:bg-gray-200 disabled:text-gray-400"
+                            className="h-11 w-11 rounded-2xl bg-[#2563eb] flex items-center justify-center text-white hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/20 disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none"
                           >
                             <Plus className="h-5 w-5" />
                           </button>
                         </div>
                         <div className="text-right">
                           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Subtotal</p>
-                          <p className="text-xl font-black text-indigo-700">${(i.qty * i.product.salePrice).toFixed(2)}</p>
+                          <p className="text-2xl font-black text-indigo-700">${(i.qty * i.product.salePrice).toFixed(2)}</p>
                         </div>
                       </div>
                     </div>
