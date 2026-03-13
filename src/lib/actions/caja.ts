@@ -5,6 +5,7 @@ import { cookies } from "next/headers"
 import { serializeDoc } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
 import { getUserId } from "@/lib/auth-utils"
+import { getMeridaDayRange } from "@/lib/date-utils"
 
 export async function getCashRegisterState(dateFilter?: string) {
   try {
@@ -36,8 +37,8 @@ export async function getCashRegisterState(dateFilter?: string) {
     const salesQuery = db.collection("salesHistory").where("userId", "==", userId)
     const salesSnap = await salesQuery.get()
     
-    // JS Filtering: Determine if we use sessionStart (since last cut) or dateFilter (today)
-    const todayISO = dateFilter || new Date().toLocaleDateString('en-CA');
+    // JS Filtering using Merida Timezone
+    const { start, end, dateStr } = getMeridaDayRange(dateFilter)
 
     const filteredDocs = salesSnap.docs.filter(doc => {
       const data = doc.data()
@@ -47,8 +48,7 @@ export async function getCashRegisterState(dateFilter?: string) {
       if (sessionStart) {
         return createdAt > sessionStart
       } else {
-        const docDate = createdAt.toISOString().split('T')[0]
-        return docDate === todayISO
+        return createdAt >= start && createdAt <= end
       }
     })
 
@@ -57,7 +57,7 @@ export async function getCashRegisterState(dateFilter?: string) {
       totalUserDocs: salesSnap.size,
       foundFiltered: filteredDocs.length,
       usingSessionStart: !!sessionStart,
-      dateFilter: todayISO
+      dateFilter: dateStr
     });
 
     let efectivo = retainedCash

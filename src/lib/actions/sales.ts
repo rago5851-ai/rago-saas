@@ -5,6 +5,7 @@ import { cookies } from "next/headers"
 import { serializeDoc } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
 import { getUserId } from "@/lib/auth-utils"
+import { getMeridaDayRange, getMeridaTodayStr } from "@/lib/date-utils"
 
 export async function getProductInventory() {
   try {
@@ -94,10 +95,7 @@ export async function getSalesHistory(dateFilter?: string) {
     let query = db.collection("salesHistory").where("userId", "==", userId)
 
     if (dateFilter) {
-      // dateFilter is YYYY-MM-DD. 
-      // We create boundaries ensuring we cover the full day regardless of exact server time.
-      const start = new Date(`${dateFilter}T00:00:00Z`) // Force UTC to avoid local server offset
-      const end = new Date(`${dateFilter}T23:59:59.999Z`)
+      const { start, end } = getMeridaDayRange(dateFilter)
       query = query.where("createdAt", ">=", start).where("createdAt", "<=", end)
     }
 
@@ -124,19 +122,19 @@ export async function getDashboardStats(dateFilter?: string) {
     const query = db.collection("salesHistory").where("userId", "==", userId)
     const snap = await query.get()
     
-    // JS Filtering: Use todayISO to stay consistent with working logic
-    const todayISO = dateFilter || new Date().toLocaleDateString('en-CA');
+    // JS Filtering using Merida Timezone
+    const { start, end, dateStr } = getMeridaDayRange(dateFilter)
     
     const todaySales = snap.docs.filter(doc => {
       const data = doc.data();
       if (!data.createdAt) return false;
-      const docDate = data.createdAt.toDate().toISOString().split('T')[0];
-      return docDate === todayISO;
+      const createdAt = data.createdAt.toDate();
+      return createdAt >= start && createdAt <= end;
     }).map(doc => doc.data());
 
     console.log("[AUDIT] getDashboardStats JS results", { 
       userId, 
-      dateFilter: todayISO, 
+      dateFilter: dateStr, 
       totalUserDocs: snap.size,
       foundToday: todaySales.length
     });
