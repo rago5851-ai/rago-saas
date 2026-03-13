@@ -36,6 +36,7 @@ export async function getCashRegisterState(dateFilter?: string) {
     const salesQuery = db.collection("salesHistory").where("userId", "==", userId)
     const salesSnap = await salesQuery.get()
     
+    // JS Filtering: Determine if we use sessionStart (since last cut) or dateFilter (today)
     const todayISO = dateFilter || new Date().toLocaleDateString('en-CA');
 
     const filteredDocs = salesSnap.docs.filter(doc => {
@@ -55,22 +56,18 @@ export async function getCashRegisterState(dateFilter?: string) {
       userId, 
       totalUserDocs: salesSnap.size,
       foundFiltered: filteredDocs.length,
-      usingSessionStart: !!sessionStart
-    });
-    console.log("[AUDIT] getCashRegisterState Results:", { 
-      userId, 
-      found: salesSnap.size,
       usingSessionStart: !!sessionStart,
-      sessionStart: sessionStart?.toISOString()
+      dateFilter: todayISO
     });
 
     let efectivo = retainedCash
     let tarjeta = 0
     let transferencia = 0
 
-    salesSnap.docs.forEach(doc => {
+    filteredDocs.forEach(doc => {
       const data = doc.data()
       const amount = data.total || 0
+      // Verificar nombre del campo: paymentMethod
       if (data.paymentMethod === "EFECTIVO") efectivo += amount
       else if (data.paymentMethod === "TARJETA") tarjeta += amount
       else if (data.paymentMethod === "TRANSFERENCIA") transferencia += amount
