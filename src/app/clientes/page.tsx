@@ -127,50 +127,87 @@ export default function ClientesPage() {
       <AnimatePresence>
         {showModal && (
           <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end justify-center p-4"
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 sm:p-6"
             onClick={() => setShowModal(false)}
           >
             <motion.div 
-              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-              className="w-full max-w-md bg-white rounded-3xl p-6 pb-10 shadow-2xl space-y-6"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="w-full max-w-sm bg-white rounded-[2.5rem] p-8 shadow-2xl space-y-8 relative overflow-hidden"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-black text-gray-900">Nuevo Cliente</h2>
-                <button onClick={() => setShowModal(false)} className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                  <X className="h-4 w-4 text-gray-500" />
+              {/* Decorative background element */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16 blur-3xl pointer-events-none" />
+
+              <div className="flex justify-between items-center relative z-10">
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-black text-gray-900 leading-none">Nuevo Cliente</h2>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Registro de Lealtad</p>
+                </div>
+                <button 
+                  onClick={() => setShowModal(false)} 
+                  className="h-10 w-10 rounded-2xl bg-gray-50 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                >
+                  <X className="h-5 w-5 text-gray-400" />
                 </button>
               </div>
 
-              {error && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm font-bold border border-red-100">{error}</div>}
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }} 
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-red-50 text-red-600 rounded-2xl text-xs font-bold border border-red-100 flex items-center gap-3"
+                >
+                  <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                  {error}
+                </motion.div>
+              )}
 
-              <form onSubmit={handleCreate} className="space-y-4">
+              <form onSubmit={handleCreate} className="space-y-6 relative z-10">
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Nombre Completo</label>
-                  <input 
-                    autoFocus
-                    required
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    className="w-full h-14 px-4 rounded-xl border-2 border-gray-100 focus:border-[#2563eb] focus:outline-none font-bold text-lg"
-                    placeholder="Ej. Juan Pérez"
-                  />
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Nombre Completo</label>
+                  <div className="relative group">
+                     <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300 group-focus-within:text-[#2563eb] transition-colors" />
+                     <input 
+                       autoFocus
+                       required
+                       value={newName}
+                       onChange={e => setNewName(e.target.value)}
+                       className="w-full h-14 pl-12 pr-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-[#2563eb] focus:outline-none font-bold text-gray-800 transition-all"
+                       placeholder="Nombre del cliente"
+                     />
+                  </div>
                 </div>
+                
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Teléfono / WhatsApp</label>
-                  <input 
-                    required
-                    type="tel"
-                    value={newPhone}
-                    onChange={e => setNewPhone(e.target.value)}
-                    className="w-full h-14 px-4 rounded-xl border-2 border-gray-100 focus:border-[#2563eb] focus:outline-none font-bold text-lg"
-                    placeholder="9381234567"
-                  />
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Teléfono / WhatsApp</label>
+                  <div className="relative group">
+                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300 group-focus-within:text-[#2563eb] transition-colors" />
+                     <input 
+                       required
+                       type="tel"
+                       value={newPhone}
+                       onChange={e => setNewPhone(e.target.value)}
+                       className="w-full h-14 pl-12 pr-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-[#2563eb] focus:outline-none font-bold text-gray-800 transition-all"
+                       placeholder="10 dígitos"
+                     />
+                  </div>
                 </div>
-                <Button disabled={processing} className="w-full h-14 bg-[#2563eb] hover:bg-blue-700 rounded-2xl text-lg font-black shadow-lg shadow-blue-500/20">
-                  {processing ? "Registrando..." : "Confirmar Registro"}
-                </Button>
+
+                <div className="pt-2">
+                  <Button 
+                    disabled={processing} 
+                    className="w-full h-14 bg-[#2563eb] hover:bg-blue-700 rounded-[1.25rem] text-base font-black shadow-xl shadow-blue-500/30 active:scale-[0.98] transition-all"
+                  >
+                    {processing ? "Procesando..." : "Confirmar Registro"}
+                  </Button>
+                  {/* Keyboard Safety Space */}
+                  <div className="h-4 sm:hidden" />
+                </div>
               </form>
             </motion.div>
           </motion.div>
