@@ -37,7 +37,7 @@ export async function getSalesReport(range: string, customStart?: string, custom
     }
 
     // Fetch sales for the user
-    const snapshot = await db.collection("sales")
+    const snapshot = await db.collection("salesHistory")
       .where("userId", "==", userId)
       .get()
 
@@ -54,14 +54,17 @@ export async function getSalesReport(range: string, customStart?: string, custom
     // Filter by date range in JS
     sales = sales.filter(s => s.createdAt >= startDate && s.createdAt <= endDate)
 
-    // Aggregate by day
-    const dailyData: Record<string, number> = {}
+    // Aggregate
+    const groupedData: Record<string, number> = {}
     sales.forEach(s => {
-      const day = format(toZonedTime(s.createdAt, TIMEZONE), "yyyy-MM-dd")
-      dailyData[day] = (dailyData[day] || 0) + s.total
+      const dateZoned = toZonedTime(s.createdAt, TIMEZONE)
+      const groupKey = range === "hoy" 
+        ? format(dateZoned, "HH:00")
+        : format(dateZoned, "yyyy-MM-dd")
+      groupedData[groupKey] = (groupedData[groupKey] || 0) + s.total
     })
 
-    const chartData = Object.entries(dailyData)
+    const chartData = Object.entries(groupedData)
       .map(([date, total]) => ({ date, total }))
       .sort((a, b) => a.date.localeCompare(b.date))
 
@@ -98,7 +101,7 @@ export async function getTopProducts(range: string, customStart?: string, custom
       startDate = subDays(start, 7)
     }
 
-    const snapshot = await db.collection("sales")
+    const snapshot = await db.collection("salesHistory")
       .where("userId", "==", userId)
       .get()
 

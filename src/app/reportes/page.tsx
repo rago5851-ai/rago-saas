@@ -221,7 +221,14 @@ export default function ReportesPage() {
                       Top 6 Productos
                     </h3>
                     {data.length === 0 ? (
-                      <div className="py-10 text-center text-gray-400 font-medium">No hay ventas registradas</div>
+                      <div className="py-20 text-center space-y-3">
+                        <div className="bg-gray-50 h-16 w-16 rounded-full flex items-center justify-center mx-auto">
+                          <Package className="h-8 w-8 text-gray-300" />
+                        </div>
+                        <p className="text-gray-400 font-bold text-sm">
+                          {range === "hoy" ? "Sin ventas el día de hoy" : "Sin ventas registradas"}
+                        </p>
+                      </div>
                     ) : (
                       <div className="space-y-4">
                         {data.map((item, idx) => (
@@ -251,7 +258,12 @@ export default function ReportesPage() {
                 ) : (
                   <div className="space-y-3">
                     {data.length === 0 ? (
-                      <div className="py-20 text-center text-gray-400 font-bold">No hay cortes registrados</div>
+                      <div className="py-20 text-center space-y-3">
+                        <div className="bg-gray-50 h-16 w-16 rounded-full flex items-center justify-center mx-auto">
+                          <ClipboardList className="h-8 w-8 text-gray-300" />
+                        </div>
+                        <p className="text-gray-400 font-bold text-sm">No hay cortes registrados</p>
+                      </div>
                     ) : (
                       data.map(cut => {
                         const isExact = Math.abs(cut.difference) < 0.01;
