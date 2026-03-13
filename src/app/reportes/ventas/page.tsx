@@ -20,7 +20,7 @@ export default function VentasPage() {
     async function load() {
       setLoading(true)
       const res = await getSalesReport(range)
-      if (res.success) setData(res.data)
+      if (res.success && res.data) setData(res.data)
       setLoading(false)
     }
     load()
