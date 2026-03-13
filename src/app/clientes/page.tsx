@@ -91,19 +91,32 @@ export default function ClientesPage() {
           <Button 
             disabled={loadingConfig}
             onClick={async () => {
-              // Recargar por si hubo cambios en otra pestaña
+              const timer = setTimeout(() => {
+                setLoadingConfig(false)
+                setShowLoyaltyModal(true)
+              }, 2500)
+
               setLoadingConfig(true)
-              const res = await getLoyaltyConfig()
-              if (res.success && res.data) setLoyaltyConfig(res.data as LoyaltyConfig)
-              setLoadingConfig(false)
-              setShowLoyaltyModal(true)
+              try {
+                const res = await getLoyaltyConfig()
+                if (res.success && res.data) {
+                  setLoyaltyConfig(res.data as LoyaltyConfig)
+                }
+              } catch (err) {
+                console.error("[LOYALTY] Client-side fetch error:", err)
+              } finally {
+                clearTimeout(timer)
+                setLoadingConfig(false)
+                setShowLoyaltyModal(true)
+              }
             }} 
-            className="h-10 w-10 rounded-2xl border-2 border-[#2563eb] bg-white hover:bg-blue-50 flex items-center justify-center transition-all shadow-sm active:scale-95 group p-0 overflow-hidden"
+            className="h-10 w-10 rounded-2xl border-2 border-[#2563eb] bg-white hover:bg-blue-50 flex items-center justify-center transition-all shadow-sm active:scale-95 group p-0 overflow-hidden relative"
           >
-            {loadingConfig ? (
-              <div className="h-4 w-4 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Settings className="h-5 w-5 text-[#2563eb] group-hover:rotate-45 transition-transform duration-300" strokeWidth={3} />
+            <Settings className={`h-5 w-5 text-[#2563eb] group-hover:rotate-45 transition-all duration-300 ${loadingConfig ? 'opacity-30 blur-[1px]' : 'opacity-100'}`} strokeWidth={3} />
+            {loadingConfig && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="h-4 w-4 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
+              </div>
             )}
           </Button>
           <Button onClick={() => setShowModal(true)} size="icon" className="h-10 w-10 rounded-2xl bg-[#2563eb] hover:bg-blue-700 shadow-md transition-all active:scale-95">
