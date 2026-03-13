@@ -26,10 +26,19 @@ export default function ClientesPage() {
   const [loadingConfig, setLoadingConfig] = useState(false)
 
   const loadClients = async (query = "") => {
-    setLoading(true)
-    const res = await getClients(query)
-    if (res.success && res.data) setClients(res.data)
-    setLoading(false)
+    // Safety timeout to prevent infinite spinner
+    const timer = setTimeout(() => setLoading(false), 4000)
+    
+    try {
+      setLoading(true)
+      const res = await getClients(query)
+      if (res.success && res.data) setClients(res.data)
+    } catch (err) {
+      console.error("Error loading clients:", err)
+    } finally {
+      clearTimeout(timer)
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -66,22 +75,32 @@ export default function ClientesPage() {
           <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Gestión de Lealtad</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* BOTÓN DE CONFIGURACIÓN DE LEALTAD */}
           <Button 
             disabled={loadingConfig}
             onClick={async () => {
               setLoadingConfig(true)
-              const res = await getLoyaltyConfig()
-              if (res.success) setLoyaltyConfig(res.data as LoyaltyConfig)
-              setLoadingConfig(false)
-              setShowLoyaltyModal(true)
+              try {
+                const res = await getLoyaltyConfig()
+                if (res.success) {
+                  setLoyaltyConfig(res.data as LoyaltyConfig)
+                } else {
+                  // Fallback defaults if fetch fails
+                  setLoyaltyConfig({ pointsPerSaleAmount: 100, pointValue: 1 })
+                }
+              } catch (err) {
+                setLoyaltyConfig({ pointsPerSaleAmount: 100, pointValue: 1 })
+              } finally {
+                setLoadingConfig(false)
+                setShowLoyaltyModal(true)
+              }
             }} 
-            variant="outline" 
-            className="h-10 w-10 rounded-2xl border-2 border-[#2563eb] bg-white hover:bg-blue-50 flex items-center justify-center transition-all shadow-sm active:scale-95"
+            className="h-10 w-10 rounded-2xl border-2 border-[#2563eb] bg-white hover:bg-blue-50 flex items-center justify-center transition-all shadow-sm active:scale-95 group p-0 overflow-hidden"
           >
             {loadingConfig ? (
               <div className="h-4 w-4 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Settings className="h-5 w-5 text-[#2563eb]" />
+              <Settings className="h-5 w-5 text-[#2563eb] group-hover:rotate-45 transition-transform duration-300" strokeWidth={3} />
             )}
           </Button>
           <Button onClick={() => setShowModal(true)} size="icon" className="h-10 w-10 rounded-2xl bg-[#2563eb] hover:bg-blue-700 shadow-md transition-all active:scale-95">
