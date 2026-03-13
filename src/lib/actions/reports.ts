@@ -19,20 +19,20 @@ export async function getSalesReport(range: string, customStart?: string, custom
     let endDate = new Date()
 
     if (range === "hoy") {
-      const { start, end } = getMeridaDayRange("today")
+      const { start, end } = getMeridaDayRange()
       startDate = start
       endDate = end
     } else if (range === "7d") {
-      const { start } = getMeridaDayRange("today")
+      const { start } = getMeridaDayRange()
       startDate = subDays(start, 7)
     } else if (range === "mes") {
-      const { start } = getMeridaDayRange("today")
+      const { start } = getMeridaDayRange()
       startDate = startOfMonth(start)
     } else if (range === "custom" && customStart && customEnd) {
       startDate = parseISO(customStart)
       endDate = parseISO(customEnd)
     } else {
-      const { start } = getMeridaDayRange("today")
+      const { start } = getMeridaDayRange()
       startDate = subDays(start, 7)
     }
 
@@ -84,20 +84,20 @@ export async function getTopProducts(range: string, customStart?: string, custom
     let endDate = new Date()
 
     if (range === "hoy") {
-      const { start, end } = getMeridaDayRange("today")
+      const { start, end } = getMeridaDayRange()
       startDate = start
       endDate = end
     } else if (range === "7d") {
-      const { start } = getMeridaDayRange("today")
+      const { start } = getMeridaDayRange()
       startDate = subDays(start, 7)
     } else if (range === "mes") {
-      const { start } = getMeridaDayRange("today")
+      const { start } = getMeridaDayRange()
       startDate = startOfMonth(start)
     } else if (range === "custom" && customStart && customEnd) {
       startDate = parseISO(customStart)
       endDate = parseISO(customEnd)
     } else {
-      const { start } = getMeridaDayRange("today")
+      const { start } = getMeridaDayRange()
       startDate = subDays(start, 7)
     }
 
