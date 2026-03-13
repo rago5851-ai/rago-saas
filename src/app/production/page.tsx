@@ -87,27 +87,47 @@ export default function ProductionPage() {
               ) : (
                 orders.map((o: any) => (
                   <Link href={`/production/${o.id}`} key={o.id} className="block group">
-                    <Card className={`overflow-hidden transition-all shadow-md group-hover:shadow-lg border ${o.status === "FINISHED" ? "border-indigo-700 bg-indigo-950" : "border-indigo-600 bg-indigo-900"} rounded-2xl`}>
-                      <div className="p-4 flex justify-between items-start">
-                        <div>
-                          <h3 className="font-bold text-white text-lg line-clamp-1">{o.formula.name}</h3>
-                          <div className="text-xs text-indigo-200 mt-1 flex items-center gap-1.5 ">
-                            {o.status === 'PENDING' ? <Clock className="h-4 w-4 text-amber-400"/> : <CheckCircle2 className="h-4 w-4 text-emerald-400"/>}
-                            <span className="font-semibold">{o.status === 'PENDING' ? "En Preparación" : "Finalizado"}</span>
-                            <span className="text-indigo-400 font-bold">•</span>
-                            {new Date(o.createdAt).toLocaleDateString("es-MX", { day: '2-digit', month: 'short' })}
+                    <Card className="overflow-hidden bg-white hover:bg-gray-50/50 transition-all shadow-sm group-hover:shadow-md border border-gray-100 rounded-[1.5rem] relative">
+                      <div className="p-5 flex justify-between items-center sm:items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-black text-[#2563eb] text-lg leading-tight truncate uppercase tracking-tight">
+                            {o.formula.name}
+                          </h3>
+                          <div className="text-xs text-gray-500 mt-2 flex items-center gap-2 font-bold">
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-100/80">
+                              {o.status === 'PENDING' ? (
+                                <>
+                                  <Clock className="h-3 w-3 text-amber-500"/>
+                                  <span className="text-gray-600 uppercase tracking-wider text-[9px]">En Preparación</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="h-3 w-3 text-emerald-500"/>
+                                  <span className="text-gray-600 uppercase tracking-wider text-[9px]">Finalizado</span>
+                                </>
+                              )}
+                            </div>
+                            <span className="text-gray-300">•</span>
+                            <span className="text-[10px] uppercase tracking-widest text-gray-400">
+                              {new Date(o.createdAt).toLocaleDateString("es-MX", { day: '2-digit', month: 'short' })}
+                            </span>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <div className="bg-white text-indigo-900 px-3 py-1 rounded-lg text-sm font-black shadow-md whitespace-nowrap">
+
+                        <div className="flex flex-col items-end gap-3 shrink-0">
+                          <div className="bg-[#2563eb] text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-lg shadow-blue-500/20 whitespace-nowrap">
                             {o.targetVolumeLiters} L
                           </div>
                           <button 
                             onClick={(e) => handleDelete(e, o.id)}
                             disabled={deleting === o.id}
-                            className="text-red-300 bg-red-900/40 p-1.5 rounded-md hover:bg-red-500/50 hover:text-white transition-colors"
+                            className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all active:scale-90"
                           >
-                            {deleting === o.id ? <div className="h-4 w-4 border-2 border-red-300 border-t-transparent animate-spin rounded-full"/> : <Trash2 className="h-4 w-4" />}
+                            {deleting === o.id ? (
+                              <div className="h-4 w-4 border-2 border-red-500 border-t-transparent animate-spin rounded-full"/>
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
                           </button>
                         </div>
                       </div>
