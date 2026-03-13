@@ -39,7 +39,11 @@ export default function NewFormulaPage() {
 
   useEffect(() => {
     getRawMaterials().then(res => {
-      if (res.success && res.data) setMaterials(res.data as any)
+      if (res.success && res.data) {
+        // Filtro estricto: solo insumos con stock > 0
+        const availableMaterials = (res.data as any).filter((m: any) => m.stockKg > 0);
+        setMaterials(availableMaterials)
+      }
     })
   }, [])
 

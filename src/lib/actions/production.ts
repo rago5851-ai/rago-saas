@@ -248,6 +248,7 @@ export async function completeWorkOrder(orderId: string, observations: string = 
         })
       }
       revalidatePath("/ventas")
+      revalidatePath("/inventory")
     }
 
     revalidatePath("/production")

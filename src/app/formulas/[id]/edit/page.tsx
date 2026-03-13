@@ -45,7 +45,9 @@ export default function EditFormulaPage() {
         ])
 
         if (matRes.success && matRes.data) {
-          setMaterials(matRes.data as any)
+          // Filtro estricto: solo insumos con stock > 0
+          const availableMaterials = (matRes.data as any).filter((m: any) => m.stockKg > 0);
+          setMaterials(availableMaterials)
         }
 
         if (formRes.success && formRes.data) {

@@ -1,13 +1,14 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, Suspense, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getFormulas } from "@/lib/actions/formulas"
+import { getRawMaterials } from "@/lib/actions/inventory"
 import { createWorkOrder } from "@/lib/actions/production"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Beaker, Check, AlertCircle } from "lucide-react"
+import { ArrowLeft, Beaker, Check, AlertCircle, ShieldCheck, ShieldAlert } from "lucide-react"
 
 function ProductionOrderForm() {
   const router = useRouter()
@@ -15,6 +16,7 @@ function ProductionOrderForm() {
   const urlFormulaId = searchParams.get("formulaId")
 
   const [formulas, setFormulas] = useState<any[]>([])
+  const [materials, setMaterials] = useState<any[]>([])
   const [selectedFormulaId, setSelectedFormulaId] = useState<string>(urlFormulaId || "")
   const [targetVolume, setTargetVolume] = useState<string>("")
   const [salePrice, setSalePrice] = useState<string>("")
@@ -23,22 +25,66 @@ function ProductionOrderForm() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getFormulas().then(res => {
-      if (res.success && res.data) {
-        setFormulas(res.data)
+    Promise.all([
+      getFormulas(),
+      getRawMaterials()
+    ]).then(([fRes, mRes]) => {
+      if (fRes.success && fRes.data) {
+        setFormulas(fRes.data)
         if (!selectedFormulaId && urlFormulaId) {
           setSelectedFormulaId(urlFormulaId)
         }
+      }
+      if (mRes.success && mRes.data) {
+        setMaterials(mRes.data)
       }
     })
   }, [urlFormulaId])
 
   const selectedFormula = formulas.find(f => f.id === selectedFormulaId) || null
 
+  // Validación de stock en tiempo real
+  const stockValidation = useMemo(() => {
+    const vol = parseFloat(targetVolume)
+    if (!selectedFormula || isNaN(vol) || vol <= 0) return { isPossible: true, missing: [] }
+
+    // 1. Calcular baseLiters de la fórmula (igual que en completeWorkOrder)
+    let baseLiters = 0
+    selectedFormula.FormulaIngredients.forEach((ing: any) => {
+      const rm = materials.find(m => m.id === ing.rawMaterialId)
+      const density = rm?.densityKgL || 1
+      baseLiters += (ing.quantityKg / density)
+    })
+
+    if (baseLiters === 0) return { isPossible: false, missing: ["Fórmula base inválida"] }
+    const scaleFactor = vol / baseLiters
+
+    // 2. Comprobar disponibilidad de cada ingrediente
+    const missing: string[] = []
+    selectedFormula.FormulaIngredients.forEach((ing: any) => {
+      const rm = materials.find(m => m.id === ing.rawMaterialId)
+      if (!rm) {
+        missing.push(ing.rawMaterialId)
+        return
+      }
+      const requiredKg = ing.quantityKg * scaleFactor
+      if (rm.stockKg < requiredKg) {
+        missing.push(`${rm.name} (Faltan ${(requiredKg - rm.stockKg).toFixed(2)} kg)`)
+      }
+    })
+
+    return {
+      isPossible: missing.length === 0,
+      missing
+    }
+  }, [selectedFormula, targetVolume, materials])
+
   const handleCreate = async () => {
     const vol = parseFloat(targetVolume)
     if (!selectedFormulaId) return setError("Debes seleccionar una fórmula base.")
     if (isNaN(vol) || vol <= 0) return setError("El volumen a preparar debe ser mayor a cero.")
+    if (!stockValidation.isPossible) return setError("No cuentas con stock suficiente para esta producción.")
+
     const isTerminado = selectedFormula?.type === "TERMINADO" || !selectedFormula?.type
     const price = parseFloat(salePrice)
     if (isTerminado && (isNaN(price) || price <= 0)) return setError("Ingresa el Precio de Venta por litro para productos terminados.")
@@ -100,7 +146,7 @@ function ProductionOrderForm() {
                     <Beaker className="h-6 w-6"/>
                  </div>
                  <div>
-                    <h3 className="text-indigo-900 font-bold">{selectedFormula.name}</h3>
+                    <h3 className="text-indigo-900 font-bold uppercase">{selectedFormula.name}</h3>
                     <p className="text-indigo-600 font-medium text-sm">{selectedFormula.FormulaIngredients.length} ingredientes requeridos</p>
                  </div>
               </div>
@@ -120,9 +166,34 @@ function ProductionOrderForm() {
                />
                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl font-bold text-gray-400">L</span>
             </div>
-            <p className="text-xs text-gray-500 mt-2 px-1">
-               Ingresa el volumen total esperado. El sistema escalará automáticamente los kilos necesarios de cada materia prima de acuerdo a la receta base.
-            </p>
+            
+            {/* Mensajes de Validación de Stock */}
+            {selectedFormula && targetVolume && parseFloat(targetVolume) > 0 && (
+              <div className="mt-4">
+                {!stockValidation.isPossible ? (
+                  <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3">
+                    <ShieldAlert className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-black text-red-900 uppercase">Bloqueo de Seguridad: Stock Insuficiente</p>
+                      <ul className="mt-1 space-y-1">
+                        {stockValidation.missing.map((m: string, i: number) => (
+                          <li key={i} className="text-xs text-red-700 font-bold">• {m}</li>
+                        ))}
+                      </ul>
+                      <p className="text-[10px] text-red-600 font-medium mt-2">No se puede preparar este lote hasta que se registre la compra de los insumos faltantes en Inventario.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3">
+                    <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
+                    <div>
+                      <p className="text-sm font-black text-emerald-900 uppercase">Stock Garantizado</p>
+                      <p className="text-xs text-emerald-700 font-bold">Tienes todos los insumos necesarios para preparar {targetVolume} L.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {selectedFormula && (selectedFormula.type === "TERMINADO" || !selectedFormula.type) && (
@@ -148,8 +219,8 @@ function ProductionOrderForm() {
 
         <Button 
           onClick={handleCreate} 
-          disabled={loading || !selectedFormulaId || !targetVolume} 
-          className="w-full h-14 text-lg font-black text-white rounded-xl mt-8 bg-indigo-700 hover:bg-indigo-800 shadow-lg shadow-indigo-700/30"
+          disabled={loading || !selectedFormulaId || !targetVolume || !stockValidation.isPossible} 
+          className={`w-full h-14 text-lg font-black text-white rounded-xl mt-8 shadow-lg transition-all ${!stockValidation.isPossible ? "bg-gray-400 cursor-not-allowed opacity-70" : "bg-indigo-700 hover:bg-indigo-800 shadow-indigo-700/30"}`}
         >
           {loading ? "Creando Lote..." : "Escalar y Crear Orden"}
         </Button>
