@@ -117,11 +117,11 @@ export default function ProductosPage() {
                              <p className="text-[10px] font-bold text-gray-400 uppercase leading-none mb-0.5">{item.count} und</p>
                              <p className="font-black text-[#2563eb] text-sm leading-none">${Number(item.revenue || 0).toLocaleString()}</p>
                           </div>
-                          <div className="w-1.5 h-8 bg-gray-50 rounded-full overflow-hidden">
+                          <div className="relative w-1.5 h-8 bg-gray-50 rounded-full overflow-hidden shrink-0">
                              <motion.div 
                                initial={{ height: 0 }}
                                animate={{ height: `${(Number(item.revenue) / (Number(data[0]?.revenue) || 1)) * 100}%` }}
-                               className="w-full bg-[#2563eb] absolute bottom-0"
+                               className="w-full bg-[#2563eb] absolute bottom-0 left-0"
                              />
                           </div>
                        </div>
