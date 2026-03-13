@@ -8,20 +8,31 @@ import { Button } from "../../../components/ui/button"
 import { Skeleton } from "../../../components/ui/skeleton"
 import { motion, AnimatePresence } from "framer-motion"
 
+import { format, subDays } from "date-fns"
+
 export default function ProductosPage() {
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [range, setRange] = useState("hoy")
+  const [customStart, setCustomStart] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"))
+  const [customEnd, setCustomEnd] = useState(format(new Date(), "yyyy-MM-dd"))
 
   useEffect(() => {
     async function load() {
-      setLoading(true)
-      const res = await getTopProducts(range)
-      if (res.success && res.data) setData(res.data)
-      setLoading(false)
+      try {
+        setLoading(true)
+        const res = await getTopProducts(range, customStart, customEnd)
+        if (res.success && res.data) setData(res.data)
+        else setData([])
+      } catch (err) {
+        console.error(err)
+        setData([])
+      } finally {
+        setLoading(false)
+      }
     }
     load()
-  }, [range])
+  }, [range, customStart, customEnd])
 
   return (
     <div className="min-h-screen bg-white pb-20">
@@ -38,18 +49,36 @@ export default function ProductosPage() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 pt-6 space-y-6">
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {["hoy", "7d", "mes"].map(r => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={`px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                range === r ? "bg-[#2563eb] text-white" : "bg-gray-50 text-gray-400"
-              }`}
-            >
-              {r === "hoy" ? "Hoy" : r === "7d" ? "7 Días" : "Mes"}
-            </button>
-          ))}
+        {/* Filter */}
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {["hoy", "7d", "mes", "custom"].map(r => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                className={`px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                  range === r ? "bg-[#2563eb] text-white shadow-lg shadow-blue-200" : "bg-gray-50 text-gray-400"
+                }`}
+              >
+                {r === "hoy" ? "Hoy" : r === "7d" ? "7 Días" : r === "mes" ? "Mes" : "Personalizado"}
+              </button>
+            ))}
+          </div>
+
+          <AnimatePresence>
+            {range === "custom" && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} className="grid grid-cols-2 gap-3 pb-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Inicio</label>
+                  <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="w-full h-10 bg-gray-50 border border-transparent rounded-xl px-3 text-xs font-bold focus:bg-white focus:border-blue-200 outline-none" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Fin</label>
+                  <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="w-full h-10 bg-gray-50 border border-transparent rounded-xl px-3 text-xs font-bold focus:bg-white focus:border-blue-200 outline-none" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
@@ -58,7 +87,7 @@ export default function ProductosPage() {
             Top 6 Productos
           </h3>
 
-          <AnimatePresence mode="wait">
+          <div className="min-h-[200px] flex flex-col justify-center">
             {loading ? (
               <div className="space-y-4">
                 {[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full rounded-2xl" />)}
@@ -84,7 +113,7 @@ export default function ProductosPage() {
                       <div className="w-full bg-gray-50 h-2 rounded-full mt-1 overflow-hidden">
                         <motion.div 
                           initial={{ width: 0 }}
-                          animate={{ width: `${(Number(item.count) / Number(data[0].count)) * 100}%` }}
+                          animate={{ width: `${(Number(item.count) / (Number(data[0]?.count) || 1)) * 100}%` }}
                           className="h-full bg-[#2563eb]"
                         />
                       </div>
@@ -97,7 +126,7 @@ export default function ProductosPage() {
                 ))}
               </motion.div>
             )}
-          </AnimatePresence>
+          </div>
         </div>
       </main>
     </div>

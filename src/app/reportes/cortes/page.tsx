@@ -17,10 +17,17 @@ export default function CortesPage() {
 
   useEffect(() => {
     async function load() {
-      setLoading(true)
-      const res = await getCashCutsHistory()
-      if (res.success && res.data) setData(res.data)
-      setLoading(false)
+      try {
+        setLoading(true)
+        const res = await getCashCutsHistory()
+        if (res.success && res.data) setData(res.data)
+        else setData([])
+      } catch (err) {
+        console.error(err)
+        setData([])
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [])

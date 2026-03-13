@@ -12,24 +12,46 @@ interface AreaChartProps {
 }
 
 export default function AreaChart({ items = [] }: AreaChartProps) {
-  if (!items || items.length === 0) return null
+  // Safety guard for empty or invalid data
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return (
+      <div className="h-48 flex items-center justify-center text-gray-300 font-bold border-2 border-dashed border-gray-50 rounded-2xl">
+        Cargando datos o sin registros...
+      </div>
+    )
+  }
 
-  const max = Math.max(...items.map(i => i.total), 1)
+  // Ensure total is a valid number
+  const safeItems = items.map(item => ({
+    ...item,
+    total: typeof item.total === 'number' && !isNaN(item.total) ? item.total : 0
+  }))
+
+  const max = Math.max(...safeItems.map(i => i.total), 1)
   const height = 150
   const width = 300
   const padding = 20
 
-  const points = items.map((item, i) => {
-    const x = (i / (items.length - 1 || 1)) * (width - padding * 2) + padding
+  // Points calculation with safety against 0 or 1 item
+  const points = safeItems.map((item, i) => {
+    const divisor = safeItems.length > 1 ? safeItems.length - 1 : 1
+    const x = (i / divisor) * (width - padding * 2) + padding
     const y = height - (item.total / max) * (height - padding * 2) - padding
-    return { x, y }
+    
+    // Final NaN guard
+    return { 
+      x: isNaN(x) ? padding : x, 
+      y: isNaN(y) ? height - padding : y 
+    }
   })
 
   const pathData = points.reduce((acc, point, i) => {
     return i === 0 ? `M ${point.x} ${point.y}` : `${acc} L ${point.x} ${point.y}`
   }, "")
 
-  const areaData = `${pathData} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`
+  const areaData = points.length > 0 
+    ? `${pathData} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`
+    : ""
 
   return (
     <div className="w-full aspect-[2/1] relative mt-4">
