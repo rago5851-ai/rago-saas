@@ -49,6 +49,17 @@ export default function ClientesPage() {
     return () => clearTimeout(delayDebounce)
   }, [search])
 
+  useEffect(() => {
+    const fetchConfig = async () => {
+      console.log("[CLIENTES] Loading loyalty config on mount...")
+      const res = await getLoyaltyConfig()
+      if (res.success && res.data) {
+        setLoyaltyConfig(res.data as LoyaltyConfig)
+      }
+    }
+    fetchConfig()
+  }, [])
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newName || !newPhone) return
@@ -80,21 +91,12 @@ export default function ClientesPage() {
           <Button 
             disabled={loadingConfig}
             onClick={async () => {
+              // Recargar por si hubo cambios en otra pestaña
               setLoadingConfig(true)
-              try {
-                const res = await getLoyaltyConfig()
-                if (res.success) {
-                  setLoyaltyConfig(res.data as LoyaltyConfig)
-                } else {
-                  // Fallback defaults if fetch fails
-                  setLoyaltyConfig({ pointsPerSaleAmount: 100, pointValue: 1 })
-                }
-              } catch (err) {
-                setLoyaltyConfig({ pointsPerSaleAmount: 100, pointValue: 1 })
-              } finally {
-                setLoadingConfig(false)
-                setShowLoyaltyModal(true)
-              }
+              const res = await getLoyaltyConfig()
+              if (res.success && res.data) setLoyaltyConfig(res.data as LoyaltyConfig)
+              setLoadingConfig(false)
+              setShowLoyaltyModal(true)
             }} 
             className="h-10 w-10 rounded-2xl border-2 border-[#2563eb] bg-white hover:bg-blue-50 flex items-center justify-center transition-all shadow-sm active:scale-95 group p-0 overflow-hidden"
           >
@@ -269,7 +271,7 @@ export default function ClientesPage() {
             className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[110] bg-emerald-600 text-white px-6 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-2"
           >
             <Check className="h-5 w-5" />
-            Configuración Actualizada
+            ¡Configuración Guardada en la Nube!
           </motion.div>
         )}
       </AnimatePresence>
@@ -320,7 +322,7 @@ export default function ClientesPage() {
                               type="number" 
                               onFocus={(e) => e.target.select()}
                               className="w-full h-11 pl-7 pr-3 bg-white border-2 border-transparent focus:border-[#2563eb] rounded-xl font-black text-gray-900 focus:outline-none transition-all shadow-sm text-sm"
-                              value={loyaltyConfig?.pointsPerSaleAmount ?? ''}
+                              value={loyaltyConfig?.pointsPerSaleAmount === 0 ? '' : (loyaltyConfig?.pointsPerSaleAmount ?? '')}
                               onChange={e => {
                                  const val = e.target.value === '' ? 0 : Number(e.target.value)
                                  setLoyaltyConfig(prev => prev ? { ...prev, pointsPerSaleAmount: val } : { pointsPerSaleAmount: val, pointValue: 1 })
@@ -355,7 +357,7 @@ export default function ClientesPage() {
                           step="0.01"
                           onFocus={(e) => e.target.select()}
                           className="w-full h-11 pl-7 pr-3 bg-white border-2 border-transparent focus:border-[#2563eb] rounded-xl font-black text-gray-900 focus:outline-none transition-all shadow-sm text-sm"
-                          value={loyaltyConfig?.pointValue ?? ''}
+                          value={loyaltyConfig?.pointValue === 0 ? '' : (loyaltyConfig?.pointValue ?? '')}
                           onChange={e => {
                             const val = e.target.value === '' ? 0 : Number(e.target.value)
                             setLoyaltyConfig(prev => prev ? { ...prev, pointValue: val } : { pointValue: val, pointsPerSaleAmount: 100 })
@@ -375,6 +377,7 @@ export default function ClientesPage() {
                       setSavingLoyalty(false)
                       
                       if (res.success) {
+                        console.log("[LOYALTY] ¡Guardado en la Nube!");
                         setShowLoyaltyModal(false)
                         setShowSuccessToast(true)
                         setTimeout(() => setShowSuccessToast(false), 3000)

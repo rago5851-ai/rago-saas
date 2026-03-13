@@ -45,11 +45,19 @@ export async function getLoyaltyConfig() {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
 
-    const doc = await db.collection("configuracion").doc(userId).get()
-    if (!doc.exists) return { success: true, data: DEFAULT_LOYALTY_CONFIG }
+    const docRef = db.collection("configuracion").doc(`${userId}_lealtad`)
+    const doc = await docRef.get()
+    
+    if (!doc.exists) {
+      console.log("[LOYALTY] No config found, using defaults for user:", userId)
+      return { success: true, data: DEFAULT_LOYALTY_CONFIG }
+    }
 
-    return { success: true, data: doc.data() as LoyaltyConfig }
+    const data = doc.data() as LoyaltyConfig
+    console.log("[LOYALTY] Config loaded:", data)
+    return { success: true, data }
   } catch (error) {
+    console.error("[LOYALTY] Load error:", error)
     return { success: false, error: "Error al cargar configuración" }
   }
 }
@@ -59,21 +67,24 @@ export async function updateLoyaltyConfig(config: LoyaltyConfig) {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
 
-    await db.collection("configuracion").doc(userId).set({
-      ...config,
+    const dataToSave = {
+      pointsPerSaleAmount: Number(config.pointsPerSaleAmount),
+      pointValue: Number(config.pointValue),
       userId,
       tipo: "ajustes_lealtad",
       updatedAt: new Date()
-    })
+    }
+
+    console.log("[LOYALTY] Saving config to 'configuracion/${userId}_lealtad':", dataToSave)
     
-    // Forzar actualización en todas las rutas que usan esta config
+    await db.collection("configuracion").doc(`${userId}_lealtad`).set(dataToSave)
+    
     revalidatePath("/ventas")
     revalidatePath("/clientes")
-    revalidatePath("/")
     
     return { success: true }
   } catch (error) {
-    console.error("Error saving loyalty config:", error)
+    console.error("[LOYALTY] Save error:", error)
     return { success: false, error: "Error al guardar configuración" }
   }
 }
