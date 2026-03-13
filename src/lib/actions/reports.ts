@@ -19,17 +19,21 @@ export async function getSalesReport(range: string, customStart?: string, custom
     let endDate = new Date()
 
     if (range === "hoy") {
-      const { start } = getMeridaDayRange("today")
+      const { start, end } = getMeridaDayRange("today")
       startDate = start
+      endDate = end
     } else if (range === "7d") {
-      startDate = subDays(new Date(), 7)
+      const { start } = getMeridaDayRange("today")
+      startDate = subDays(start, 7)
     } else if (range === "mes") {
-      startDate = startOfMonth(new Date())
+      const { start } = getMeridaDayRange("today")
+      startDate = startOfMonth(start)
     } else if (range === "custom" && customStart && customEnd) {
       startDate = parseISO(customStart)
       endDate = parseISO(customEnd)
     } else {
-      startDate = subDays(new Date(), 7)
+      const { start } = getMeridaDayRange("today")
+      startDate = subDays(start, 7)
     }
 
     // Fetch sales for the user
@@ -37,20 +41,24 @@ export async function getSalesReport(range: string, customStart?: string, custom
       .where("userId", "==", userId)
       .get()
 
-    let sales = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date()
-    })) as any[]
+    let sales = snapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        ...data,
+        total: Number(data.total) || 0,
+        createdAt: data.createdAt?.toDate() || new Date()
+      }
+    })
 
-    // Filter by date range in JS to avoid complex indices for now
+    // Filter by date range in JS
     sales = sales.filter(s => s.createdAt >= startDate && s.createdAt <= endDate)
 
     // Aggregate by day
     const dailyData: Record<string, number> = {}
     sales.forEach(s => {
       const day = format(toZonedTime(s.createdAt, TIMEZONE), "yyyy-MM-dd")
-      dailyData[day] = (dailyData[day] || 0) + (Number(s.total) || 0)
+      dailyData[day] = (dailyData[day] || 0) + s.total
     })
 
     const chartData = Object.entries(dailyData)
@@ -73,27 +81,34 @@ export async function getTopProducts(range: string, customStart?: string, custom
     let endDate = new Date()
 
     if (range === "hoy") {
-      const { start } = getMeridaDayRange("today")
+      const { start, end } = getMeridaDayRange("today")
       startDate = start
+      endDate = end
     } else if (range === "7d") {
-      startDate = subDays(new Date(), 7)
+      const { start } = getMeridaDayRange("today")
+      startDate = subDays(start, 7)
     } else if (range === "mes") {
-      startDate = startOfMonth(new Date())
+      const { start } = getMeridaDayRange("today")
+      startDate = startOfMonth(start)
     } else if (range === "custom" && customStart && customEnd) {
       startDate = parseISO(customStart)
       endDate = parseISO(customEnd)
     } else {
-      startDate = subDays(new Date(), 7)
+      const { start } = getMeridaDayRange("today")
+      startDate = subDays(start, 7)
     }
 
     const snapshot = await db.collection("sales")
       .where("userId", "==", userId)
       .get()
 
-    let sales = snapshot.docs.map(doc => ({
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date()
-    }))
+    let sales = snapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        ...data,
+        createdAt: data.createdAt?.toDate() || new Date()
+      }
+    })
 
     sales = sales.filter(s => s.createdAt >= startDate && s.createdAt <= endDate)
 
@@ -110,7 +125,7 @@ export async function getTopProducts(range: string, customStart?: string, custom
     const topProducts = Object.entries(productCounts)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 5)
+      .slice(0, 6)
 
     return { success: true, data: topProducts }
   } catch (error) {

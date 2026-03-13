@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { getSalesReport, getTopProducts, getCashCutsHistory, maintenanceCleanup } from "@/lib/actions/reports"
-import { ArrowLeft, Calendar, TrendingUp, Package, ClipboardList, ChevronDown, Filter, Trash2, Star, Trophy } from "lucide-react"
+import { ArrowLeft, Calendar, TrendingUp, Package, ClipboardList, ChevronDown, Filter, Trash2, Star, Trophy, Banknote } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -201,29 +201,48 @@ export default function ReportesPage() {
                 {reportType === "ventas" ? (
                   <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-black text-gray-900 flex items-center gap-2"><TrendingUp className="h-5 w-5 text-emerald-500" />Ingresos</h3>
+                      <h3 className="font-black text-gray-900 flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-emerald-500" />
+                        Ingresos
+                      </h3>
                       <div className="text-right">
                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Total Periodo</p>
-                        <p className="text-xl font-black text-[#2563eb]">${data.reduce((acc, curr) => acc + curr.total, 0).toLocaleString()}</p>
+                        <p className="text-xl font-black text-[#2563eb]">
+                          ${(data || []).reduce((acc, curr) => acc + (Number(curr.total) || 0), 0).toLocaleString()}
+                        </p>
                       </div>
                     </div>
                     <AreaChart items={data} />
                   </div>
                 ) : reportType === "productos" ? (
                   <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
-                    <h3 className="font-black text-gray-900 flex items-center gap-2 mb-2"><Trophy className="h-5 w-5 text-amber-500" />Top 5 Productos</h3>
-                    {data.length === 0 ? <div className="py-10 text-center text-gray-400 font-medium">No hay ventas registradas</div> : (
+                    <h3 className="font-black text-gray-900 flex items-center gap-2 mb-2">
+                      <Trophy className="h-5 w-5 text-amber-500" />
+                      Top 6 Productos
+                    </h3>
+                    {data.length === 0 ? (
+                      <div className="py-10 text-center text-gray-400 font-medium">No hay ventas registradas</div>
+                    ) : (
                       <div className="space-y-4">
                         {data.map((item, idx) => (
                           <div key={item.name} className="flex items-center gap-4 group">
-                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-lg ${idx === 0 ? "bg-amber-100 text-amber-600" : "bg-gray-100 text-gray-400"}`}>{idx + 1}</div>
+                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-lg ${idx === 0 ? "bg-amber-100 text-amber-600" : "bg-gray-100 text-gray-400"}`}>
+                              {idx + 1}
+                            </div>
                             <div className="flex-1">
                               <p className="font-bold text-gray-800 text-sm">{item.name}</p>
                               <div className="w-full bg-gray-50 h-2 rounded-full mt-1 overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${(item.count / data[0].count) * 100}%` }} className="h-full bg-[#2563eb]" />
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${(Number(item.count) / Number(data[0].count)) * 100}%` }}
+                                  className="h-full bg-[#2563eb]"
+                                />
                               </div>
                             </div>
-                            <div className="text-right"><p className="font-black text-gray-900">{item.count}</p><p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Unidades</p></div>
+                            <div className="text-right">
+                              <p className="font-black text-gray-900">{item.count}</p>
+                              <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Unidades</p>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -231,27 +250,86 @@ export default function ReportesPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {data.length === 0 ? <div className="py-20 text-center text-gray-400 font-bold">No hay cortes registrados</div> : data.map(cut => {
-                      const isExact = Math.abs(cut.difference) < 0.01;
-                      const isPositive = cut.difference > 0;
-                      return (
-                        <div key={cut.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                          <button onClick={() => setExpandedCutId(expandedCutId === cut.id ? null : cut.id)} className="w-full p-4 flex items-center gap-4 text-left">
-                            <div className="bg-blue-50 px-3 py-2 rounded-xl shrink-0 min-w-[65px] flex flex-col items-center">
-                              <span className="text-[8px] font-black text-blue-600 uppercase">{format(new Date(cut.createdAt), "MMM", { locale: es })}</span>
-                              <span className="text-lg font-black text-blue-700 leading-none">{format(new Date(cut.createdAt), "dd")}</span>
-                            </div>
-                            <div className="flex-1 truncate">
-                              <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{cut.userName}</p>
-                              <p className="font-bold text-gray-900 text-sm truncate">{format(new Date(cut.createdAt), "HH:mm")}</p>
-                            </div>
-                            <div className={`px-2 py-1 rounded-full text-[8px] font-black uppercase ${isExact ? "bg-emerald-50 text-emerald-600" : isPositive ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"}`}>
-                              {isExact ? "Ok" : isPositive ? `+$${cut.difference.toFixed(2)}` : `-$${Math.abs(cut.difference).toFixed(2)}`}
-                            </div>
-                          </button>
-                        </div>
-                      )
-                    })}
+                    {data.length === 0 ? (
+                      <div className="py-20 text-center text-gray-400 font-bold">No hay cortes registrados</div>
+                    ) : (
+                      data.map(cut => {
+                        const isExact = Math.abs(cut.difference) < 0.01;
+                        const isPositive = cut.difference > 0;
+                        const isExpanded = expandedCutId === cut.id;
+                        
+                        return (
+                          <div key={cut.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                            <button 
+                              onClick={() => setExpandedCutId(isExpanded ? null : cut.id)} 
+                              className="w-full p-4 flex items-center gap-4 text-left hover:bg-gray-50/50 transition-colors"
+                            >
+                              <div className="bg-blue-50 px-3 py-2 rounded-xl shrink-0 min-w-[65px] flex flex-col items-center">
+                                <span className="text-[8px] font-black text-blue-600 uppercase">
+                                  {format(new Date(cut.createdAt), "MMM", { locale: es })}
+                                </span>
+                                <span className="text-lg font-black text-blue-700 leading-none">
+                                  {format(new Date(cut.createdAt), "dd")}
+                                </span>
+                              </div>
+                              <div className="flex-1 truncate">
+                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{cut.userName}</p>
+                                <p className="font-bold text-gray-900 text-sm truncate">{format(new Date(cut.createdAt), "HH:mm")}</p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className={`px-2 py-1 rounded-full text-[8px] font-black uppercase ${isExact ? "bg-emerald-50 text-emerald-600" : isPositive ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"}`}>
+                                  {isExact ? "Ok" : isPositive ? `+$${Number(cut.difference).toFixed(2)}` : `-$${Math.abs(Number(cut.difference)).toFixed(2)}`}
+                                </div>
+                                <ChevronDown className={`h-4 w-4 text-gray-300 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                              </div>
+                            </button>
+                            
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <motion.div 
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="px-4 pb-5 border-t border-gray-50 pt-4 bg-gray-50/30 space-y-4"
+                                >
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-3">
+                                      <div className="flex flex-col">
+                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Monto Esperado</span>
+                                        <span className="text-sm font-bold text-gray-700">${Number(cut.expectedEfectivo || 0).toFixed(2)}</span>
+                                      </div>
+                                      <div className="flex flex-col">
+                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Recuento Manual</span>
+                                        <span className="text-sm font-bold text-gray-900">${Number(cut.manualCount || 0).toFixed(2)}</span>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                      <div className="flex flex-col">
+                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Diferencia</span>
+                                        <span className={`text-sm font-black ${isExact ? "text-emerald-600" : isPositive ? "text-amber-600" : "text-red-500"}`}>
+                                          {isPositive ? "+" : ""}${Number(cut.difference || 0).toFixed(2)}
+                                        </span>
+                                      </div>
+                                      <div className="flex flex-col bg-[#2563eb]/5 p-2 rounded-xl border border-blue-100">
+                                        <span className="text-[8px] font-black text-[#2563eb] uppercase tracking-widest">Retiro Real</span>
+                                        <span className="text-lg font-black text-[#2563eb]">${Number(cut.withdrawAmount || 0).toFixed(2)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[10px] font-bold bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                    <div className="flex items-center gap-2 text-gray-500 uppercase">
+                                      <Banknote className="h-4 w-4 text-indigo-400" />
+                                      Fondo Restante
+                                    </div>
+                                    <span className="text-indigo-600 font-black text-sm">${Number(cut.cashRetained || 0).toFixed(2)}</span>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        )
+                      })
+                    )}
                   </div>
                 )}
               </motion.div>
