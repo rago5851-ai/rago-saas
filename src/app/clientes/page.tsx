@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { getClients, createClient } from "@/lib/actions/clients"
 import { getLoyaltyConfig, updateLoyaltyConfig, LoyaltyConfig } from "@/lib/actions/sales"
-import { ArrowLeft, UserPlus, Search, Phone, User, Star, X, Settings } from "lucide-react"
+import { ArrowLeft, UserPlus, Search, Phone, User, Star, X, Settings, Check } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -24,6 +24,7 @@ export default function ClientesPage() {
   const [loyaltyConfig, setLoyaltyConfig] = useState<LoyaltyConfig | null>(null)
   const [savingLoyalty, setSavingLoyalty] = useState(false)
   const [loadingConfig, setLoadingConfig] = useState(false)
+  const [showSuccessToast, setShowSuccessToast] = useState(false)
 
   const loadClients = async (query = "") => {
     // Safety timeout to prevent infinite spinner
@@ -260,77 +261,100 @@ export default function ClientesPage() {
         )}
       </AnimatePresence>
 
+      {/* Toast de Éxito */}
+      <AnimatePresence>
+        {showSuccessToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[110] bg-emerald-600 text-white px-6 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-2"
+          >
+            <Check className="h-5 w-5" />
+            Configuración Actualizada
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Modal Lealtad Rago (Configuración) */}
       <AnimatePresence>
         {showLoyaltyModal && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-6"
+            className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
             onClick={() => setShowLoyaltyModal(false)}
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl ring-1 ring-black/5"
+              className="bg-white rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl ring-1 ring-black/5 relative"
               onClick={e => e.stopPropagation()}
             >
-              <div className="bg-[#2563eb] p-8 flex flex-col items-center text-center relative overflow-hidden">
+              {/* Botón Cerrar */}
+              <button 
+                onClick={() => setShowLoyaltyModal(false)}
+                className="absolute top-4 right-4 z-20 h-8 w-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <div className="bg-[#2563eb] p-6 flex flex-col items-center text-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
-                <div className="h-20 w-20 bg-white/20 rounded-3xl flex items-center justify-center mb-4 backdrop-blur-sm">
-                  <Settings className="h-10 w-10 text-white animate-[spin_10s_linear_infinite]" />
+                <div className="h-14 w-14 bg-white/20 rounded-2xl flex items-center justify-center mb-3 backdrop-blur-sm">
+                  <Settings className="h-7 v-7 text-white animate-[spin_10s_linear_infinite]" />
                 </div>
-                <h3 className="text-2xl font-black text-white uppercase tracking-tight">Lealtad Rago</h3>
-                <p className="text-blue-100 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Configuración del Sistema</p>
+                <h3 className="text-xl font-black text-white uppercase tracking-tight">Lealtad Rago</h3>
+                <p className="text-blue-100 text-[9px] font-black uppercase tracking-[0.2em] mt-1">Configuración del Sistema</p>
               </div>
 
-              <div className="p-8 space-y-8">
-                <div className="space-y-4">
+              <div className="p-6 space-y-6">
+                <div className="space-y-3">
                    <div className="flex justify-between items-center px-1">
                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estructura de Ganancia</p>
                      <div className="h-px flex-1 bg-gray-100 ml-4" />
                    </div>
-                   <div className="bg-gray-50 p-5 rounded-[2rem] border border-gray-100 shadow-inner space-y-4">
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Cada gasto de:</p>
-                        <div className="relative group">
-                           <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-gray-400 group-focus-within:text-[#2563eb] transition-colors">$</span>
-                           <input 
-                            type="number" 
-                            className="w-full h-14 pl-10 pr-4 bg-white border-2 border-transparent focus:border-[#2563eb] rounded-2xl font-black text-gray-900 focus:outline-none transition-all shadow-sm"
-                            value={loyaltyConfig?.pointsPerSaleAmount ?? ''}
-                            onChange={e => {
-                               const val = e.target.value === '' ? 0 : Number(e.target.value)
-                               setLoyaltyConfig(prev => prev ? { ...prev, pointsPerSaleAmount: val } : { pointsPerSaleAmount: val, pointValue: 1 })
-                            }}
-                           />
+                   <div className="bg-gray-50 p-4 rounded-3xl border border-gray-100 shadow-inner flex flex-col gap-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1 mb-1">Cada gasto de:</p>
+                          <div className="relative group">
+                             <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-gray-400 group-focus-within:text-[#2563eb] transition-colors text-sm">$</span>
+                             <input 
+                              type="number" 
+                              onFocus={(e) => e.target.select()}
+                              className="w-full h-11 pl-7 pr-3 bg-white border-2 border-transparent focus:border-[#2563eb] rounded-xl font-black text-gray-900 focus:outline-none transition-all shadow-sm text-sm"
+                              value={loyaltyConfig?.pointsPerSaleAmount ?? ''}
+                              onChange={e => {
+                                 const val = e.target.value === '' ? 0 : Number(e.target.value)
+                                 setLoyaltyConfig(prev => prev ? { ...prev, pointsPerSaleAmount: val } : { pointsPerSaleAmount: val, pointValue: 1 })
+                              }}
+                             />
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3 px-1">
-                        <div className="h-px flex-1 bg-indigo-100" />
-                        <div className="text-indigo-300 font-black">=</div>
-                        <div className="h-px flex-1 bg-indigo-100" />
-                      </div>
-                      <div className="flex items-center justify-between bg-white/60 p-4 rounded-2xl border border-indigo-50">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Obtiene:</p>
-                        <div className="font-black text-[#2563eb] text-xl flex items-center gap-2">
-                          1 <span className="text-xs text-[#2563eb]/60">PTO</span>
+                        <div className="pt-5 hidden sm:block">
+                           <div className="text-indigo-300 font-black">=</div>
+                        </div>
+                        <div className="flex-1">
+                           <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1 mb-1">Obtiene:</p>
+                           <div className="h-11 flex items-center justify-center bg-white/60 rounded-xl border border-indigo-50 font-black text-[#2563eb] text-sm gap-1">
+                             1 <span className="text-[10px] opacity-60">PTO</span>
+                           </div>
                         </div>
                       </div>
                    </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                    <div className="flex justify-between items-center px-1">
                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Valor de Redención</p>
                      <div className="h-px flex-1 bg-gray-100 ml-4" />
                    </div>
-                   <div className="bg-blue-50/50 p-5 rounded-[2rem] border border-blue-100 shadow-inner">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1 mb-2">1 Punto Equivale a:</p>
+                   <div className="bg-blue-50/50 p-4 rounded-3xl border border-blue-100 shadow-inner space-y-2">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">1 Punto Equivale a:</p>
                       <div className="relative group">
-                         <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-gray-400 group-focus-within:text-[#2563eb] transition-colors">$</span>
+                         <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-gray-400 group-focus-within:text-[#2563eb] transition-colors text-sm">$</span>
                          <input 
                           type="number" 
                           step="0.01"
-                          className="w-full h-14 pl-10 pr-4 bg-white border-2 border-transparent focus:border-[#2563eb] rounded-2xl font-black text-gray-900 focus:outline-none transition-all shadow-sm"
+                          onFocus={(e) => e.target.select()}
+                          className="w-full h-11 pl-7 pr-3 bg-white border-2 border-transparent focus:border-[#2563eb] rounded-xl font-black text-gray-900 focus:outline-none transition-all shadow-sm text-sm"
                           value={loyaltyConfig?.pointValue ?? ''}
                           onChange={e => {
                             const val = e.target.value === '' ? 0 : Number(e.target.value)
@@ -343,18 +367,20 @@ export default function ClientesPage() {
 
                 <Button 
                   disabled={savingLoyalty}
-                  className="w-full h-16 bg-[#2563eb] hover:bg-blue-700 text-white font-black text-lg rounded-[1.5rem] shadow-xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  className="w-full h-14 bg-[#2563eb] hover:bg-blue-700 text-white font-black text-base rounded-2xl shadow-xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                   onClick={async () => {
                     if (loyaltyConfig) {
                       setSavingLoyalty(true)
                       await updateLoyaltyConfig(loyaltyConfig)
                       setSavingLoyalty(false)
                       setShowLoyaltyModal(false)
+                      setShowSuccessToast(true)
+                      setTimeout(() => setShowSuccessToast(false), 3000)
                     }
                   }}
                 >
                   {savingLoyalty ? (
-                    <div className="h-5 w-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>Guardar Configuración</>
                   )}
