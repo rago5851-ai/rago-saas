@@ -73,11 +73,14 @@ export async function getCashRegisterState(dateFilter?: string) {
 
     filteredDocs.forEach(doc => {
       const data = doc.data()
-      const amount = data.total || 0
-      // Verificar nombre del campo: paymentMethod
-      if (data.paymentMethod === "EFECTIVO") efectivo += amount
-      else if (data.paymentMethod === "TARJETA") tarjeta += amount
-      else if (data.paymentMethod === "TRANSFERENCIA") transferencia += amount
+      const amount = Number(data.total) || 0
+      const method = (data.paymentMethod || "").toString().toUpperCase().trim()
+      
+      console.log("[AUDIT] Caja Doc Item:", { id: doc.id, method, amount });
+      
+      if (method === "EFECTIVO") efectivo += amount
+      else if (method === "TARJETA") tarjeta += amount
+      else if (method === "TRANSFERENCIA") transferencia += amount
     })
 
     const total = efectivo + tarjeta + transferencia
