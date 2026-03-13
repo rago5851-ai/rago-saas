@@ -61,10 +61,19 @@ export async function updateLoyaltyConfig(config: LoyaltyConfig) {
 
     await db.collection("configuracion").doc(userId).set({
       ...config,
+      userId,
+      tipo: "ajustes_lealtad",
       updatedAt: new Date()
     })
+    
+    // Forzar actualización en todas las rutas que usan esta config
+    revalidatePath("/ventas")
+    revalidatePath("/clientes")
+    revalidatePath("/")
+    
     return { success: true }
   } catch (error) {
+    console.error("Error saving loyalty config:", error)
     return { success: false, error: "Error al guardar configuración" }
   }
 }

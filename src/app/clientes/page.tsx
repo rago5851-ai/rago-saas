@@ -371,11 +371,16 @@ export default function ClientesPage() {
                   onClick={async () => {
                     if (loyaltyConfig) {
                       setSavingLoyalty(true)
-                      await updateLoyaltyConfig(loyaltyConfig)
+                      const res = await updateLoyaltyConfig(loyaltyConfig)
                       setSavingLoyalty(false)
-                      setShowLoyaltyModal(false)
-                      setShowSuccessToast(true)
-                      setTimeout(() => setShowSuccessToast(false), 3000)
+                      
+                      if (res.success) {
+                        setShowLoyaltyModal(false)
+                        setShowSuccessToast(true)
+                        setTimeout(() => setShowSuccessToast(false), 3000)
+                      } else {
+                        setError(res.error || "Error al guardar configuración")
+                      }
                     }
                   }}
                 >
