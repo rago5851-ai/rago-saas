@@ -30,16 +30,67 @@ export async function getProductInventory() {
 export type CartItem = { productId: string; name: string; quantity: number; pricePerLiter: number }
 export type PaymentMethod = "EFECTIVO" | "TARJETA" | "TRANSFERENCIA"
 
-export async function processCheckout(cart: CartItem[], paymentMethod: PaymentMethod = "EFECTIVO", amountPaid: number = 0) {
+export type LoyaltyConfig = {
+  pointsPerSaleAmount: number // e.g. 100 pesos
+  pointValue: number // e.g. 1 peso
+}
+
+const DEFAULT_LOYALTY_CONFIG: LoyaltyConfig = {
+  pointsPerSaleAmount: 100,
+  pointValue: 1
+}
+
+export async function getLoyaltyConfig() {
+  try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    const doc = await db.collection("loyaltySettings").doc(userId).get()
+    if (!doc.exists) return { success: true, data: DEFAULT_LOYALTY_CONFIG }
+
+    return { success: true, data: doc.data() as LoyaltyConfig }
+  } catch (error) {
+    return { success: false, error: "Error al cargar configuración" }
+  }
+}
+
+export async function updateLoyaltyConfig(config: LoyaltyConfig) {
+  try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    await db.collection("loyaltySettings").doc(userId).set({
+      ...config,
+      updatedAt: new Date()
+    })
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: "Error al guardar configuración" }
+  }
+}
+
+export async function processCheckout(
+  cart: CartItem[], 
+  paymentMethod: PaymentMethod = "EFECTIVO", 
+  amountPaid: number = 0,
+  clientId?: string,
+  redeemPoints: boolean = false
+) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
     if (!cart || cart.length === 0) return { success: false, error: "El carrito está vacío" }
 
-    const total = cart.reduce((s, i) => s + i.quantity * i.pricePerLiter, 0)
-    console.log("[AUDIT] processCheckout START", { userId, cartSize: cart.length, total, paymentMethod });
+    const totalOriginal = cart.reduce((s, i) => s + i.quantity * i.pricePerLiter, 0)
+    let total = totalOriginal
+    let pointsToRedeem = 0
+    let pointsEarned = 0
+
+    const configDoc = await getLoyaltyConfig()
+    const config = configDoc.success ? configDoc.data as LoyaltyConfig : DEFAULT_LOYALTY_CONFIG
 
     await db.runTransaction(async (transaction: any) => {
+      // 1. Validar Stock
       const refs = cart.map(item => db.collection("productInventory").doc(item.productId))
       const snaps = await Promise.all(refs.map(ref => transaction.get(ref)))
 
@@ -56,21 +107,54 @@ export async function processCheckout(cart: CartItem[], paymentMethod: PaymentMe
         updates.push({ ref: refs[i], newStock })
       }
 
+      // 2. Manejar Puntos si hay cliente
+      let clientRef = null
+      let clientData = null
+      if (clientId) {
+        clientRef = db.collection("customers").doc(clientId)
+        const clientSnap = await transaction.get(clientRef)
+        if (clientSnap.exists) {
+          clientData = clientSnap.data()
+          
+          if (redeemPoints) {
+            pointsToRedeem = clientData.points || 0
+            const discount = pointsToRedeem * config.pointValue
+            total = Math.max(0, total - discount)
+            transaction.update(clientRef, { points: 0, updatedAt: new Date() })
+          }
+        }
+      }
+
+      // 3. Aplicar Stock
       for (const { ref, newStock } of updates) {
         transaction.update(ref, { stockLiters: newStock, updatedAt: new Date() })
       }
 
+      // 4. Calcular Puntos Ganados (sobre el total final descontado)
+      pointsEarned = Math.floor(total / config.pointsPerSaleAmount)
+      if (clientRef && clientData) {
+        const currentPoints = redeemPoints ? 0 : (clientData.points || 0)
+        transaction.update(clientRef, { 
+          points: currentPoints + pointsEarned, 
+          updatedAt: new Date() 
+        })
+      }
+
+      // 5. Registrar Venta
       const saleRef = db.collection("salesHistory").doc()
       transaction.set(saleRef, {
         userId: userId,
+        customerId: clientId || null,
         items: cart,
+        totalOriginal: Math.round(totalOriginal * 100) / 100,
         total: Math.round(total * 100) / 100,
+        pointsRedeemed: pointsToRedeem,
+        pointsEarned: pointsEarned,
         paymentMethod,
         amountPaid: Math.round(amountPaid * 100) / 100,
         change: paymentMethod === "EFECTIVO" ? Math.round((amountPaid - total) * 100) / 100 : 0,
         createdAt: new Date(),
       })
-      console.log("[AUDIT] Transaction set saleRef", saleRef.id);
     })
 
     console.log("[AUDIT] processCheckout SUCCESS", { userId });

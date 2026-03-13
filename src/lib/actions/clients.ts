@@ -53,3 +53,24 @@ export async function createClient(name: string, phone: string) {
     return { success: false, error: "No se pudo registrar el cliente" }
   }
 }
+
+export async function getClientByPhone(phone: string) {
+  try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    const snapshot = await db.collection("customers")
+      .where("userId", "==", userId)
+      .where("phone", "==", phone)
+      .limit(1)
+      .get()
+
+    if (snapshot.empty) return { success: true, data: null }
+
+    const doc = snapshot.docs[0]
+    return { success: true, data: serializeDoc({ id: doc.id, ...doc.data() }) }
+  } catch (error: any) {
+    console.error("Error fetching client by phone:", error)
+    return { success: false, error: "Error al buscar cliente" }
+  }
+}

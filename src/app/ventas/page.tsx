@@ -1,10 +1,12 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { getProductInventory, processCheckout, CartItem, PaymentMethod } from "@/lib/actions/sales"
+import { getProductInventory, processCheckout, CartItem, PaymentMethod, getLoyaltyConfig, updateLoyaltyConfig, LoyaltyConfig } from "@/lib/actions/sales"
+import { getClientByPhone } from "@/lib/actions/clients"
 import {
   Search, Plus, Minus, ShoppingCart, Package2, X,
-  CheckCircle2, CreditCard, ArrowRightLeft, Banknote, ChevronRight, Trash2
+  CheckCircle2, CreditCard, ArrowRightLeft, Banknote, ChevronRight, Trash2, 
+  Phone, UserPlus, Star, Settings, Check
 } from "lucide-react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
@@ -30,6 +32,14 @@ export default function VentasPage() {
   const [checkingOut, setCheckingOut] = useState(false)
   const [successData, setSuccessData] = useState<{ total: number; change: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  
+  // Loyalty state
+  const [customerPhone, setCustomerPhone] = useState("")
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
+  const [searchingCustomer, setSearchingCustomer] = useState(false)
+  const [redeemPoints, setRedeemPoints] = useState(false)
+  const [loyaltyConfig, setLoyaltyConfig] = useState<LoyaltyConfig | null>(null)
+  const [showConfigModal, setShowConfigModal] = useState(false)
 
   const loadProducts = () => {
     setLoading(true)
@@ -39,7 +49,32 @@ export default function VentasPage() {
     })
   }
 
-  useEffect(() => { loadProducts() }, [])
+  const loadConfig = () => {
+    getLoyaltyConfig().then(res => {
+      if (res.success) setLoyaltyConfig(res.data as LoyaltyConfig)
+    })
+  }
+
+  useEffect(() => { 
+    loadProducts()
+    loadConfig()
+  }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (customerPhone.length >= 10) {
+        setSearchingCustomer(true)
+        const res = await getClientByPhone(customerPhone)
+        if (res.success) {
+          setSelectedCustomer(res.data)
+        }
+        setSearchingCustomer(false)
+      } else {
+        setSelectedCustomer(null)
+      }
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [customerPhone])
 
   const normalize = (str: string) =>
     str.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase()
@@ -80,14 +115,20 @@ export default function VentasPage() {
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
   const hasIncompleteStock = cartItems.some(i => i.qty > i.product.stockLiters)
 
+  const totalDiscount = redeemPoints && selectedCustomer && loyaltyConfig 
+    ? (selectedCustomer.points || 0) * loyaltyConfig.pointValue 
+    : 0
+  const totalFinal = Math.max(0, total - totalDiscount)
+  const pointsToEarn = Math.floor(totalFinal / (loyaltyConfig?.pointsPerSaleAmount || 100))
+
   const cashPaid = parseFloat(cashInput) || 0
-  const change = cashPaid - total
+  const change = cashPaid - totalFinal
 
   const openModal = () => { setStep("METHODS"); setMethod("EFECTIVO"); setCashInput(""); setError(null); setShowModal(true) }
   const closeModal = () => { if (!checkingOut) { setShowModal(false); setSuccessData(null); setCart({}) } }
 
   const handleConfirmPayment = async () => {
-    if (method === "EFECTIVO" && cashPaid < total) {
+    if (method === "EFECTIVO" && cashPaid < totalFinal) {
       setError("El monto recibido es menor al total.")
       return
     }
@@ -99,7 +140,13 @@ export default function VentasPage() {
       quantity: i.qty,
       pricePerLiter: i.product.salePrice,
     }))
-    const result = await processCheckout(payload, method, method === "EFECTIVO" ? cashPaid : total)
+    const result = await processCheckout(
+      payload, 
+      method, 
+      method === "EFECTIVO" ? cashPaid : totalFinal,
+      selectedCustomer?.id,
+      redeemPoints
+    )
     if (result.success) {
       setSuccessData({ total: result.total!, change: method === "EFECTIVO" ? change : 0 })
       setStep("SUCCESS")
@@ -133,6 +180,9 @@ export default function VentasPage() {
               <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-indigo-900 text-[10px] font-black rounded-full h-4 w-4 flex items-center justify-center">{cartCount}</span>
             </motion.div>
           )}
+          <button onClick={() => setShowConfigModal(true)} className="p-2 bg-white/10 rounded-full text-white ml-2">
+            <Settings className="h-5 w-5" />
+          </button>
         </div>
         <div className="relative px-2">
           <Input type="search" placeholder="Buscar producto (ej. Cloro)..." value={search}
@@ -143,7 +193,67 @@ export default function VentasPage() {
       </header>
 
       <main className="flex-1 p-5 pb-[120px] space-y-6">
-        {/* RESULTADOS DE BÚSQUEDA */}
+        {/* BUSCADOR DE CLIENTE / LEALTAD */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-indigo-50 px-4 py-2 border-b border-indigo-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Star className="h-4 w-4 text-indigo-600 fill-indigo-600" />
+              <p className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Lealtad Rago</p>
+            </div>
+            {selectedCustomer && (
+              <span className="text-[10px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase">
+                Puntos: {selectedCustomer.points || 0}
+              </span>
+            )}
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input 
+                type="tel" 
+                placeholder="Teléfono del Cliente..." 
+                value={customerPhone}
+                onChange={e => setCustomerPhone(e.target.value)}
+                className="pl-9 h-11 rounded-xl border-gray-100 text-sm font-bold placeholder:font-normal"
+              />
+              {searchingCustomer && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                   <div className="animate-spin h-4 w-4 border-2 border-indigo-600 border-t-transparent rounded-full" />
+                </div>
+              )}
+            </div>
+
+            <AnimatePresence mode="wait">
+              {selectedCustomer ? (
+                <motion.div
+                  initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 5 }}
+                  className="flex items-center justify-between bg-emerald-50 p-3 rounded-xl border border-emerald-100"
+                >
+                  <div>
+                    <p className="text-xs font-black text-emerald-800 uppercase leading-tight">{selectedCustomer.name}</p>
+                    <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Cliente Frecuente</p>
+                  </div>
+                  <X className="h-4 w-4 text-emerald-400 cursor-pointer" onClick={() => { setCustomerPhone(""); setSelectedCustomer(null); }} />
+                </motion.div>
+              ) : customerPhone.length >= 10 && !searchingCustomer && (
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center justify-between p-3 rounded-xl border border-dashed border-gray-200"
+                >
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Cliente no registrado</p>
+                  <Link href="/clientes">
+                    <Button variant="ghost" className="h-7 px-3 text-[10px] font-black text-indigo-600 hover:bg-indigo-50 flex items-center gap-1 group">
+                      <UserPlus className="h-3 w-3" />
+                      REGISTRAR CLIENTE
+                    </Button>
+                  </Link>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </section>
+
+        {/* RESULTADOS DE BÚSQUEDA PRODUCTO */}
         <AnimatePresence mode="wait">
           {search.trim() !== "" && (
             <motion.div
@@ -284,7 +394,7 @@ export default function VentasPage() {
             <div className="bg-indigo-800 rounded-2xl shadow-2xl flex items-center justify-between p-4 border border-white/10 gap-4">
               <div className="flex-1">
                 <p className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-0.5">Total a Pagar</p>
-                <p className="text-2xl font-black text-white tabular-nums">${total.toFixed(2)}</p>
+                <p className="text-2xl font-black text-white tabular-nums">${totalFinal.toFixed(2)}</p>
               </div>
 
               <div className="flex flex-col items-end gap-1">
@@ -331,11 +441,37 @@ export default function VentasPage() {
                         <X className="h-4 w-4" />
                       </button>
                       <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-1">Registrar Venta</p>
-                      <p className="text-white text-5xl font-black">${total.toFixed(2)}</p>
-                      <p className="text-indigo-300 text-sm mt-1">{cartItems.reduce((s, i) => s + i.qty, 0)} litros · {cartItems.length} producto{cartItems.length !== 1 ? "s" : ""}</p>
+                      <p className="text-white text-5xl font-black">${totalFinal.toFixed(2)}</p>
+                      {totalDiscount > 0 && (
+                        <p className="text-indigo-300 text-xs mt-1 line-through">Subtotal: ${total.toFixed(2)}</p>
+                      )}
+                      <p className="text-indigo-300 text-[10px] mt-1 uppercase tracking-widest font-bold">
+                        {cartItems.reduce((s, i) => s + i.qty, 0)} litros · {pointsToEarn} PUNTOS GANADOS
+                      </p>
                     </div>
 
                     <div className="px-5 py-5 space-y-4 -mt-4 bg-white rounded-t-3xl relative pb-28">
+                      {/* LEALTAD EN CHECKOUT */}
+                      {selectedCustomer && (selectedCustomer.points > 0 || pointsToEarn > 0) && (
+                        <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 flex items-center justify-center bg-indigo-600 rounded-full shadow-lg shadow-indigo-600/30">
+                              <Star className="h-5 w-5 text-white fill-white" />
+                            </div>
+                            <div>
+                               <p className="text-xs font-black text-indigo-900 uppercase leading-none mb-1">Puntos de {selectedCustomer.name.split(' ')[0]}</p>
+                               <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Saldo: {selectedCustomer.points || 0} pts (${totalDiscount.toFixed(2)})</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => setRedeemPoints(!redeemPoints)}
+                            disabled={selectedCustomer.points <= 0}
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-black transition-all ${redeemPoints ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-indigo-600 border border-indigo-100 active:bg-indigo-50'} disabled:opacity-50`}
+                          >
+                            {redeemPoints ? ' CANJEADO' : ' CANJEAR'}
+                          </button>
+                        </div>
+                      )}
                       {error && (
                         <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm font-medium flex justify-between">
                           {error}
@@ -364,21 +500,21 @@ export default function VentasPage() {
                           <div className="px-1 space-y-2">
                             <div className="relative">
                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-gray-400">$</span>
-                              <input type="number" step="0.01" min={total} value={cashInput}
+                              <input type="number" step="0.01" min={totalFinal} value={cashInput}
                                 onChange={e => setCashInput(e.target.value)}
-                                placeholder={total.toFixed(2)}
+                                placeholder={totalFinal.toFixed(2)}
                                 className="w-full h-14 pl-10 pr-4 text-2xl font-black rounded-xl border-2 border-emerald-300 focus:border-emerald-500 focus:outline-none bg-white text-[#1a1a1a] placeholder:text-gray-400"
                               />
                             </div>
                             <div className="grid grid-cols-3 gap-2">
-                              {[{ label: "Exacto", val: total }, { label: "$100", val: 100 }, { label: "$200", val: 200 }].map(btn => (
+                              {[{ label: "Exacto", val: totalFinal }, { label: "$100", val: 100 }, { label: "$200", val: 200 }].map(btn => (
                                 <button key={btn.label} onClick={() => setCashInput(btn.val.toFixed(2))}
                                   className="py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-sm hover:bg-emerald-100 transition-colors">
                                   {btn.label}
                                 </button>
                               ))}
                             </div>
-                            {cashPaid > 0 && cashPaid >= total && (
+                            {cashPaid > 0 && cashPaid >= totalFinal && (
                               <div className="flex justify-between px-2 py-1">
                                 <span className="text-sm font-medium text-gray-500">Cambio a entregar</span>
                                 <span className="text-lg font-black text-indigo-700">${change.toFixed(2)}</span>
@@ -404,7 +540,7 @@ export default function VentasPage() {
                         </button>
                       </div>
 
-                      <Button onClick={handleConfirmPayment} disabled={checkingOut || (method === "EFECTIVO" && cashPaid < total)}
+                      <Button onClick={handleConfirmPayment} disabled={checkingOut || (method === "EFECTIVO" && cashPaid < totalFinal)}
                         className="w-full h-14 text-lg font-black rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 mt-2">
                         {checkingOut ? "Procesando..." : "Confirmar Pago"}
                       </Button>
@@ -446,6 +582,90 @@ export default function VentasPage() {
                     </Button>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ============ CONFIGURATION MODAL ============ */}
+      <AnimatePresence>
+        {showConfigModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md flex items-center justify-center p-6"
+            onClick={() => setShowConfigModal(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-3xl w-full max-w-sm overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="bg-indigo-700 p-6 flex flex-col items-center text-center">
+                <div className="h-16 w-16 bg-white/20 rounded-full flex items-center justify-center mb-4">
+                  <Settings className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-xl font-black text-white uppercase tracking-tight">Lealtad Rago</h3>
+                <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mt-1">Configuración del Sistema</p>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <div className="space-y-3">
+                   <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Estructura de Ganancia</p>
+                   <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                      <div className="flex-1">
+                        <p className="text-xs font-black text-gray-700 uppercase">Cada gasto de:</p>
+                        <div className="relative mt-2">
+                           <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-gray-400">$</span>
+                           <input 
+                            type="number" 
+                            className="w-full h-11 pl-8 pr-4 bg-white border border-gray-200 rounded-xl font-black focus:outline-none focus:border-indigo-600 transition-all"
+                            value={loyaltyConfig?.pointsPerSaleAmount || 0}
+                            onChange={e => setLoyaltyConfig(prev => prev ? {...prev, pointsPerSaleAmount: Number(e.target.value)} : null)}
+                           />
+                        </div>
+                      </div>
+                      <div className="h-full pt-6">
+                        <p className="text-lg font-black text-indigo-600">=</p>
+                      </div>
+                      <div className="w-20">
+                        <p className="text-xs font-black text-gray-700 uppercase">Obtiene:</p>
+                        <div className="h-11 flex items-center justify-center font-black text-indigo-600 text-xl border-b-2 border-indigo-600 mt-2">
+                          1 PTO
+                        </div>
+                      </div>
+                   </div>
+                </div>
+
+                <div className="space-y-3">
+                   <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Valor de Redención</p>
+                   <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                      <div className="flex-1">
+                        <p className="text-xs font-black text-gray-700 uppercase">1 Punto Equivale a:</p>
+                        <div className="relative mt-2">
+                           <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-gray-400">$</span>
+                           <input 
+                            type="number" 
+                            className="w-full h-11 pl-8 pr-4 bg-white border border-gray-200 rounded-xl font-black focus:outline-none focus:border-indigo-600 transition-all"
+                            value={loyaltyConfig?.pointValue || 0}
+                            onChange={e => setLoyaltyConfig(prev => prev ? {...prev, pointValue: Number(e.target.value)} : null)}
+                           />
+                        </div>
+                      </div>
+                   </div>
+                </div>
+
+                <Button 
+                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base rounded-2xl shadow-xl shadow-indigo-600/20"
+                  onClick={async () => {
+                    if (loyaltyConfig) {
+                      await updateLoyaltyConfig(loyaltyConfig)
+                      setShowConfigModal(false)
+                    }
+                  }}
+                >
+                  Guardar Configuración
+                </Button>
               </div>
             </motion.div>
           </motion.div>
