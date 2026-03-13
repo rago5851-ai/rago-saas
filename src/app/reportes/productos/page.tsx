@@ -1,11 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getTopProducts } from "@/lib/actions/reports"
+import { getTopProducts } from "../../../lib/actions/reports"
 import { ArrowLeft, Trophy, Package } from "lucide-react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Button } from "../../../components/ui/button"
+import { Skeleton } from "../../../components/ui/skeleton"
 import { motion, AnimatePresence } from "framer-motion"
 
 export default function ProductosPage() {

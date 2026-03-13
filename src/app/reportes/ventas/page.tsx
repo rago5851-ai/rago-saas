@@ -1,15 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getSalesReport } from "@/lib/actions/reports"
-import { ArrowLeft, TrendingUp, Calendar, ChevronDown } from "lucide-react"
+import { getSalesReport } from "../../../lib/actions/reports"
+import { ArrowLeft, TrendingUp } from "lucide-react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Button } from "../../../components/ui/button"
+import { Skeleton } from "../../../components/ui/skeleton"
 import dynamic from "next/dynamic"
 import { motion, AnimatePresence } from "framer-motion"
 
-const AreaChart = dynamic(() => import("@/components/charts/AreaChart"), { ssr: false })
+const AreaChart = dynamic(() => import("../../../components/charts/AreaChart"), { ssr: false })
 
 export default function VentasPage() {
   const [data, setData] = useState<any[]>([])
