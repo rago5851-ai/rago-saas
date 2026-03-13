@@ -20,6 +20,7 @@ export default function CajaPage() {
   const [step, setStep] = useState<CutStep>("CONFIRM")
   const [manualInput, setManualInput] = useState("")
   const [withdraw, setWithdraw] = useState(true)
+  const [withdrawInput, setWithdrawInput] = useState("")
   const [processing, setProcessing] = useState(false)
   const [cutResult, setCutResult] = useState<{ difference: number; cashRetained: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -36,16 +37,27 @@ export default function CajaPage() {
   useEffect(() => { loadCaja() }, [])
 
   const manualCount = parseFloat(manualInput) || 0
+  const withdrawAmount = parseFloat(withdrawInput) || 0
   const expectedEfectivo = caja?.efectivo ?? 0
   const difference = manualCount - expectedEfectivo
 
-  const openModal = () => { setStep("CONFIRM"); setManualInput(""); setWithdraw(true); setError(null); setShowModal(true) }
+  const openModal = () => { 
+    setStep("CONFIRM"); 
+    setManualInput(""); 
+    setWithdrawInput(""); 
+    setError(null); 
+    setShowModal(true) 
+  }
   const closeModal = () => { if (!processing) { setShowModal(false); setCutResult(null) } }
 
   const handleCut = async () => {
+    if (withdrawAmount > manualCount) {
+      setError("No puedes retirar más de lo que hay físicamente en caja.")
+      return
+    }
     setProcessing(true)
     setError(null)
-    const result = await processCashCut(expectedEfectivo, manualCount, withdraw)
+    const result = await processCashCut(expectedEfectivo, manualCount, withdrawAmount)
     if (result.success) {
       setCutResult({ difference: result.difference!, cashRetained: result.cashRetained! })
       setStep("RESULT")
@@ -54,6 +66,11 @@ export default function CajaPage() {
       setError(result.error || "Error al procesar el corte")
     }
     setProcessing(false)
+  }
+
+  const handleWithdrawAll = () => {
+    // Ponemos el total manual (o lo que haya) para dejar en $0
+    setWithdrawInput(manualCount.toString())
   }
 
   const rows = [
@@ -180,46 +197,55 @@ export default function CajaPage() {
                         <span className="font-black text-gray-900 text-lg">${expectedEfectivo.toFixed(2)}</span>
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-gray-700">Recuento Manual</label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-gray-400">$</span>
-                          <input type="number" step="0.01" min={0} value={manualInput}
-                            onChange={e => setManualInput(e.target.value)}
-                            placeholder="0.00"
-                            className="w-full h-14 pl-10 pr-4 text-2xl font-black rounded-xl border-2 border-amber-300 focus:border-amber-500 focus:outline-none bg-white text-[#1a1a1a] placeholder:text-gray-400"
-                          />
-                        </div>
-                        {manualInput !== "" && (
-                          <div className={`flex justify-between items-center px-1 ${difference >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                            <span className="text-sm font-medium">Diferencia</span>
-                            <span className="font-black text-lg">{difference >= 0 ? "+" : ""}${difference.toFixed(2)}</span>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold text-gray-700">Recuento Manual (Físico)</label>
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-black text-gray-400">$</span>
+                            <input type="number" step="0.01" min={0} value={manualInput}
+                              onChange={e => setManualInput(e.target.value)}
+                              placeholder="0.00"
+                              className="w-full h-12 pl-10 pr-4 text-xl font-black rounded-xl border-2 border-gray-200 focus:border-amber-500 focus:outline-none bg-white text-[#1a1a1a] placeholder:text-gray-400"
+                            />
                           </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-gray-700">¿Qué hacer con el efectivo?</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button onClick={() => setWithdraw(true)}
-                            className={`py-3 rounded-xl border-2 text-sm font-bold transition-all ${withdraw ? "border-red-500 bg-red-50 text-red-700" : "border-gray-200 bg-gray-50 text-gray-500"}`}>
-                            💸 Retirar todo
-                          </button>
-                          <button onClick={() => setWithdraw(false)}
-                            className={`py-3 rounded-xl border-2 text-sm font-bold transition-all ${!withdraw ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-gray-200 bg-gray-50 text-gray-500"}`}>
-                            🏦 Dejar en caja
-                          </button>
                         </div>
-                        <p className="text-xs text-gray-400 px-1">
-                          {withdraw
-                            ? "El efectivo se retira. La siguiente sesión empieza en $0."
-                            : "El efectivo se acumula. Se sumará a la siguiente sesión."}
-                        </p>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold text-gray-700">Cantidad a Retirar</label>
+                          <div className="relative flex gap-2">
+                            <div className="relative flex-1">
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-black text-gray-400">$</span>
+                              <input type="number" step="0.01" min={0} value={withdrawInput}
+                                onChange={e => setWithdrawInput(e.target.value)}
+                                placeholder="0.00"
+                                className="w-full h-12 pl-10 pr-4 text-xl font-black rounded-xl border-2 border-amber-300 focus:border-amber-500 focus:outline-none bg-white text-[#1a1a1a] placeholder:text-gray-400"
+                              />
+                            </div>
+                            <Button onClick={handleWithdrawAll} variant="outline" className="h-12 border-2 border-amber-500 text-amber-600 font-bold whitespace-nowrap">
+                              Retirar Todo
+                            </Button>
+                          </div>
+                        </div>
                       </div>
 
-                      <Button onClick={handleCut} disabled={processing || manualInput === ""}
+                      <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500">Diferencia (Sobra/Falta):</span>
+                          <span className={`font-black ${difference >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                            {difference >= 0 ? "+" : ""}${difference.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm border-t pt-2">
+                          <span className="text-gray-500">Queda como Fondo:</span>
+                          <span className="font-black text-indigo-600">
+                            ${(manualCount - withdrawAmount).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <Button onClick={handleCut} disabled={processing || manualInput === "" || withdrawInput === ""}
                         className="w-full h-14 text-base font-black rounded-2xl bg-amber-500 hover:bg-amber-600 text-white shadow-lg">
-                        {processing ? "Procesando..." : "Continuar"}
+                        {processing ? "Procesando..." : "Realizar Corte"}
                       </Button>
                     </div>
                   </>

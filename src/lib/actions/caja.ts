@@ -104,26 +104,33 @@ export async function getCashRegisterState(dateFilter?: string) {
 export async function processCashCut(
   expectedEfectivo: number,
   manualCount: number,
-  withdraw: boolean
+  withdrawAmount: number
 ) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
 
     const difference = manualCount - expectedEfectivo
-    const cashRetained = withdraw ? 0 : manualCount
+    // Lo que queda en caja es lo contado menos lo retirado
+    const cashRetained = manualCount - withdrawAmount
 
     await db.collection("cashCuts").add({
       userId: userId,
       expectedEfectivo: Math.round(expectedEfectivo * 100) / 100,
       manualCount: Math.round(manualCount * 100) / 100,
+      withdrawAmount: Math.round(withdrawAmount * 100) / 100,
       difference: Math.round(difference * 100) / 100,
-      withdrawn: withdraw,
       cashRetained: Math.round(cashRetained * 100) / 100,
       createdAt: new Date(),
     })
 
-    console.log("[AUDIT] processCashCut SUCCESS", { userId, expectedEfectivo, manualCount, withdraw });
+    console.log("[AUDIT] processCashCut SUCCESS", { 
+      userId, 
+      expectedEfectivo, 
+      manualCount, 
+      withdrawAmount, 
+      cashRetained 
+    });
 
     revalidatePath("/caja")
     revalidatePath("/")
