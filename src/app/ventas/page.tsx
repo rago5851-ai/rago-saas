@@ -142,7 +142,7 @@ export default function VentasPage() {
         </div>
       </header>
 
-      <main className="flex-1 p-6 pb-64 space-y-8">
+      <main className="flex-1 p-5 pb-[120px] space-y-6">
         {/* RESULTADOS DE BÚSQUEDA */}
         <AnimatePresence mode="wait">
           {search.trim() !== "" && (
@@ -150,35 +150,34 @@ export default function VentasPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-4"
+              className="space-y-2"
             >
-              <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.15em] px-2 flex items-center gap-2">
-                <div className="h-1 w-1 rounded-full bg-indigo-400"/>
-                Resultados
+              <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2 flex items-center gap-2">
+                <Search className="h-3 w-3" />
+                Sugerencias
               </h2>
               {loading ? (
-                <Skeleton className="h-20 w-full rounded-2xl" />
+                <Skeleton className="h-12 w-full rounded-xl" />
               ) : filtered.length === 0 ? (
-                <div className="p-6 bg-white rounded-3xl border border-dashed border-gray-200 text-center text-gray-400 text-sm">
-                  No se encontraron productos disponibles.
+                <div className="p-4 bg-white rounded-2xl border border-dashed border-gray-200 text-center text-gray-400 text-xs font-bold">
+                  Sin coincidencias.
                 </div>
               ) : (
                 filtered.map(p => (
-                  <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center justify-between gap-4 transition-all hover:border-indigo-100 active:scale-[0.98]">
-                    <div className="min-w-0">
-                      <p className="font-black text-gray-900 uppercase tracking-tight leading-tight">{p.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">${p.salePrice.toFixed(2)} / L</span>
-                        <span className="text-gray-300">•</span>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{p.stockLiters.toFixed(1)} L disponibles</span>
+                  <div key={p.id} className="bg-white rounded-xl border border-gray-100 p-2.5 pl-4 flex items-center justify-between gap-3 shadow-sm transition-all active:scale-[0.98]">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-gray-900 text-sm truncate uppercase tracking-tight">{p.name}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-black text-indigo-600 tracking-wider">${p.salePrice.toFixed(2)}</span>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{p.stockLiters.toFixed(1)} L disp.</span>
                       </div>
                     </div>
                     <button 
                       onClick={() => addToCart(p)}
                       disabled={cart[p.id] !== undefined}
-                      className="h-10 w-10 rounded-full bg-[#2563eb] hover:bg-blue-700 shadow-lg shadow-blue-500/30 flex items-center justify-center shrink-0 disabled:bg-gray-100 disabled:shadow-none transition-all active:scale-90"
+                      className="h-8 w-8 rounded-full bg-[#2563eb] hover:bg-blue-700 shadow-md flex items-center justify-center shrink-0 disabled:bg-gray-100 disabled:text-gray-300 transition-all active:scale-90"
                     >
-                      <Plus className="h-5 w-5 text-white" />
+                      <Plus className="h-4 w-4 text-white" />
                     </button>
                   </div>
                 ))
@@ -187,16 +186,19 @@ export default function VentasPage() {
           )}
         </AnimatePresence>
 
-        {/* VENTA ACTUAL (CARRITO) */}
-        <div className="space-y-5 pt-2">
+        {/* VENTA ACTUAL (LISTA COMPACTA) */}
+        <div className="space-y-4 pt-1">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-lg font-black text-gray-900 tracking-tight flex items-center gap-2">
+            <h2 className="text-sm font-black text-gray-900 tracking-tight flex items-center gap-2">
               Venta Actual
-              <span className="text-indigo-600 h-2 w-2 rounded-full bg-indigo-600 animate-pulse"/>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"/>
             </h2>
-            <span className="bg-indigo-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-indigo-600/20">
-              {cartItems.length} {cartItems.length === 1 ? "ITEM" : "ITEMS"}
-            </span>
+            <button 
+              onClick={() => setCart({})}
+              className="text-[9px] font-black text-red-400 uppercase tracking-[0.15em] hover:text-red-600 transition-colors"
+            >
+              Limpiar Todo
+            </button>
           </div>
 
           <AnimatePresence>
@@ -204,68 +206,62 @@ export default function VentasPage() {
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-[2.5rem] border border-dashed border-gray-200 shadow-sm"
+                className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm"
               >
-                <div className="h-16 w-16 rounded-full bg-gray-50 flex items-center justify-center mb-4">
-                  <ShoppingCart className="h-7 w-7 text-gray-200" />
+                <div className="h-12 w-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">
+                  <ShoppingCart className="h-5 w-5 text-gray-200" />
                 </div>
-                <p className="text-sm font-bold text-gray-400">Tu lista está vacía</p>
-                <p className="text-[10px] text-gray-300 uppercase tracking-widest mt-1 font-bold">Usa el buscador para añadir productos</p>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest leading-loose">Tu lista está vacía</p>
               </motion.div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {cartItems.map(i => (
                   <motion.div
                     key={i.product.id}
                     layout
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className={`bg-white rounded-[2rem] border-2 transition-all ${i.qty > i.product.stockLiters ? 'border-red-200 shadow-red-50' : 'border-transparent shadow-md shadow-gray-200/50'}`}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    className={`bg-white rounded-2xl border transition-all ${i.qty > i.product.stockLiters ? 'border-red-200 shadow-red-50' : 'border-gray-50 shadow-sm shadow-gray-200/40'}`}
                   >
-                    <div className="px-6 py-5 flex flex-col gap-4">
-                      <div className="flex justify-between items-start gap-4">
-                        <div className="flex-1">
-                          <p className="font-black text-gray-900 text-xl leading-tight uppercase tracking-tight">{i.product.name}</p>
-                          <div className="flex items-center gap-3 mt-1.5 font-bold">
-                             <span className={`text-[10px] px-2.5 py-1 rounded-lg uppercase tracking-widest ${i.qty > i.product.stockLiters ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-100 text-gray-600'}`}>
-                               LITROS: {i.product.stockLiters.toFixed(2)}
-                             </span>
-                             <span className="text-[10px] text-indigo-400 tracking-[0.1em] uppercase">${i.product.salePrice.toFixed(2)} / L</span>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => removeFromCart(i.product.id)}
-                          className="p-3 rounded-2xl bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all active:scale-90"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                    <div className="px-4 py-3 flex items-center justify-between gap-4">
+                      {/* Información Izquierda */}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-gray-900 text-[13px] leading-tight uppercase truncate">{i.product.name}</p>
+                        <p className={`text-[9px] font-black mt-0.5 tracking-wider uppercase ${i.qty > i.product.stockLiters ? 'text-red-500' : 'text-gray-400'}`}>
+                          ${i.product.salePrice.toFixed(2)}/L · {i.product.stockLiters.toFixed(1)}L Disp.
+                        </p>
                       </div>
 
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                        <div className="flex items-center gap-4">
+                      {/* Controles Derecha (Compactos) */}
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center bg-gray-50 rounded-xl p-0.5 border border-gray-100">
                           <button 
                             onClick={() => updateQty(i.product.id, -1)}
-                            className="h-11 w-11 rounded-2xl bg-[#EEF2FF] flex items-center justify-center text-[#2563eb] hover:bg-indigo-100 active:scale-95 transition-all shadow-sm shadow-indigo-100/50"
+                            className="h-7 w-7 rounded-lg bg-white flex items-center justify-center text-gray-600 shadow-sm active:scale-95 transition-all"
                           >
-                            <Minus className="h-5 w-5" />
+                            <Minus className="h-3.5 w-3.5" />
                           </button>
-                          <div className="flex flex-col items-center min-w-[70px]">
-                            <span className="text-2xl font-black text-gray-900 tabular-nums">{i.qty.toFixed(2)}</span>
-                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] -mt-1">Litros</span>
-                          </div>
+                          <span className="w-10 text-center font-black text-gray-900 text-xs tabular-nums">{i.qty.toFixed(1)}</span>
                           <button 
                             onClick={() => updateQty(i.product.id, 1)}
                             disabled={i.qty >= i.product.stockLiters}
-                            className="h-11 w-11 rounded-2xl bg-[#2563eb] flex items-center justify-center text-white hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/20 disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none"
+                            className="h-7 w-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-200 active:scale-95 transition-all disabled:bg-gray-200 disabled:shadow-none"
                           >
-                            <Plus className="h-5 w-5" />
+                            <Plus className="h-3.5 w-3.5" />
                           </button>
                         </div>
-                        <div className="text-right">
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Subtotal</p>
-                          <p className="text-2xl font-black text-indigo-700">${(i.qty * i.product.salePrice).toFixed(2)}</p>
+                        
+                        <div className="text-right min-w-[60px]">
+                          <p className="text-[11px] font-black text-indigo-700 tabular-nums">${(i.qty * i.product.salePrice).toFixed(2)}</p>
                         </div>
+
+                        <button 
+                          onClick={() => removeFromCart(i.product.id)}
+                          className="h-8 w-8 flex items-center justify-center rounded-xl bg-red-50 text-red-400 hover:text-red-600 transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   </motion.div>
@@ -276,34 +272,32 @@ export default function VentasPage() {
         </div>
       </main>
 
-      {/* Sticky cart + cobrar */}
+      {/* BARRA DE COBRO FIJA (STICKY BOTTOM BAR) */}
       <AnimatePresence>
         {cartItems.length > 0 && (
           <motion.div 
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-16 left-0 right-0 z-20 px-4 pb-3"
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            exit={{ y: 100 }}
+            className="fixed bottom-16 left-0 right-0 z-30 px-3 pb-3"
           >
-            <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mx-auto max-w-md">
-              <div className="px-4 pt-3 pb-2 space-y-1.5 max-h-36 overflow-y-auto">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Carrito</p>
-                {cartItems.map(i => (
-                  <div key={i.product.id} className="flex justify-between text-sm">
-                    <span className="text-gray-700 font-medium truncate mr-2">{i.product.name}</span>
-                    <span className="text-gray-500 shrink-0">{i.qty} L × ${i.product.salePrice?.toFixed(2)}</span>
-                  </div>
-                ))}
+            <div className="bg-indigo-800 rounded-2xl shadow-2xl flex items-center justify-between p-4 border border-white/10 gap-4">
+              <div className="flex-1">
+                <p className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-0.5">Total a Pagar</p>
+                <p className="text-2xl font-black text-white tabular-nums">${total.toFixed(2)}</p>
               </div>
-              <div className="border-t border-gray-100 px-4 py-2.5 bg-gray-50/60 flex items-center gap-3">
-                <div className="flex-1">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
-                  <p className="text-2xl font-black text-gray-900">${total.toFixed(2)}</p>
-                </div>
-                <Button onClick={openModal} disabled={hasIncompleteStock}
-                  className="h-14 px-8 text-base font-black rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/30 shrink-0 disabled:bg-gray-300">
-                  Cobrar
-                </Button>
+
+              <div className="flex flex-col items-end gap-1">
+                 {hasIncompleteStock && (
+                   <p className="text-[10px] font-bold text-amber-300 uppercase animate-pulse">Revisar Stock</p>
+                 )}
+                 <Button 
+                   onClick={openModal} 
+                   disabled={hasIncompleteStock}
+                   className={`h-12 px-8 text-base font-black rounded-xl transition-all shadow-xl ${hasIncompleteStock ? 'bg-gray-600' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-700/30'}`}
+                 >
+                   Cobrar
+                 </Button>
               </div>
             </div>
           </motion.div>
