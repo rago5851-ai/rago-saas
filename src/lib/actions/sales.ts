@@ -45,7 +45,7 @@ export async function getLoyaltyConfig() {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
 
-    const doc = await db.collection("loyaltySettings").doc(userId).get()
+    const doc = await db.collection("configuracion").doc(userId).get()
     if (!doc.exists) return { success: true, data: DEFAULT_LOYALTY_CONFIG }
 
     return { success: true, data: doc.data() as LoyaltyConfig }
@@ -59,7 +59,7 @@ export async function updateLoyaltyConfig(config: LoyaltyConfig) {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
 
-    await db.collection("loyaltySettings").doc(userId).set({
+    await db.collection("configuracion").doc(userId).set({
       ...config,
       updatedAt: new Date()
     })

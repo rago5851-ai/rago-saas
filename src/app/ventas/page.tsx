@@ -39,7 +39,6 @@ export default function VentasPage() {
   const [searchingCustomer, setSearchingCustomer] = useState(false)
   const [redeemPoints, setRedeemPoints] = useState(false)
   const [loyaltyConfig, setLoyaltyConfig] = useState<LoyaltyConfig | null>(null)
-  const [showConfigModal, setShowConfigModal] = useState(false)
 
   const loadProducts = () => {
     setLoading(true)
@@ -180,9 +179,6 @@ export default function VentasPage() {
               <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-indigo-900 text-[10px] font-black rounded-full h-4 w-4 flex items-center justify-center">{cartCount}</span>
             </motion.div>
           )}
-          <button onClick={() => setShowConfigModal(true)} className="p-2 bg-white/10 rounded-full text-white ml-2">
-            <Settings className="h-5 w-5" />
-          </button>
         </div>
         <div className="relative px-2">
           <Input type="search" placeholder="Buscar producto (ej. Cloro)..." value={search}
@@ -582,90 +578,6 @@ export default function VentasPage() {
                     </Button>
                   </div>
                 )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ============ CONFIGURATION MODAL ============ */}
-      <AnimatePresence>
-        {showConfigModal && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md flex items-center justify-center p-6"
-            onClick={() => setShowConfigModal(false)}
-          >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-3xl w-full max-w-sm overflow-hidden"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="bg-indigo-700 p-6 flex flex-col items-center text-center">
-                <div className="h-16 w-16 bg-white/20 rounded-full flex items-center justify-center mb-4">
-                  <Settings className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-xl font-black text-white uppercase tracking-tight">Lealtad Rago</h3>
-                <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mt-1">Configuración del Sistema</p>
-              </div>
-
-              <div className="p-6 space-y-6">
-                <div className="space-y-3">
-                   <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Estructura de Ganancia</p>
-                   <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                      <div className="flex-1">
-                        <p className="text-xs font-black text-gray-700 uppercase">Cada gasto de:</p>
-                        <div className="relative mt-2">
-                           <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-gray-400">$</span>
-                           <input 
-                            type="number" 
-                            className="w-full h-11 pl-8 pr-4 bg-white border border-gray-200 rounded-xl font-black focus:outline-none focus:border-indigo-600 transition-all"
-                            value={loyaltyConfig?.pointsPerSaleAmount || 0}
-                            onChange={e => setLoyaltyConfig(prev => prev ? {...prev, pointsPerSaleAmount: Number(e.target.value)} : null)}
-                           />
-                        </div>
-                      </div>
-                      <div className="h-full pt-6">
-                        <p className="text-lg font-black text-indigo-600">=</p>
-                      </div>
-                      <div className="w-20">
-                        <p className="text-xs font-black text-gray-700 uppercase">Obtiene:</p>
-                        <div className="h-11 flex items-center justify-center font-black text-indigo-600 text-xl border-b-2 border-indigo-600 mt-2">
-                          1 PTO
-                        </div>
-                      </div>
-                   </div>
-                </div>
-
-                <div className="space-y-3">
-                   <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Valor de Redención</p>
-                   <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                      <div className="flex-1">
-                        <p className="text-xs font-black text-gray-700 uppercase">1 Punto Equivale a:</p>
-                        <div className="relative mt-2">
-                           <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-gray-400">$</span>
-                           <input 
-                            type="number" 
-                            className="w-full h-11 pl-8 pr-4 bg-white border border-gray-200 rounded-xl font-black focus:outline-none focus:border-indigo-600 transition-all"
-                            value={loyaltyConfig?.pointValue || 0}
-                            onChange={e => setLoyaltyConfig(prev => prev ? {...prev, pointValue: Number(e.target.value)} : null)}
-                           />
-                        </div>
-                      </div>
-                   </div>
-                </div>
-
-                <Button 
-                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base rounded-2xl shadow-xl shadow-indigo-600/20"
-                  onClick={async () => {
-                    if (loyaltyConfig) {
-                      await updateLoyaltyConfig(loyaltyConfig)
-                      setShowConfigModal(false)
-                    }
-                  }}
-                >
-                  Guardar Configuración
-                </Button>
               </div>
             </motion.div>
           </motion.div>
