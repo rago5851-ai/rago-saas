@@ -119,16 +119,25 @@ export default function VentasPage() {
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
   const hasIncompleteStock = cartItems.some(i => i.qty > i.product.stockLiters)
 
-  const totalDiscount = redeemPoints && selectedCustomer && loyaltyConfig 
+  const totalPotentialDiscount = selectedCustomer && loyaltyConfig 
     ? (selectedCustomer.points || 0) * loyaltyConfig.pointValue 
     : 0
+
+  const totalDiscount = redeemPoints ? totalPotentialDiscount : 0
   const totalFinal = Math.max(0, total - totalDiscount)
   const pointsToEarn = Math.floor(totalFinal / (loyaltyConfig?.pointsPerSaleAmount || 100))
 
   const cashPaid = parseFloat(cashInput) || 0
   const change = cashPaid - totalFinal
 
-  const openModal = () => { setStep("METHODS"); setMethod("EFECTIVO"); setCashInput(""); setError(null); setShowModal(true) }
+  const openModal = () => { 
+    loadConfig() // Asegurar configuración fresca al abrir cobro
+    setStep("METHODS")
+    setMethod("EFECTIVO")
+    setCashInput("")
+    setError(null)
+    setShowModal(true)
+  }
   const closeModal = () => { if (!checkingOut) { setShowModal(false); setSuccessData(null); setCart({}) } }
 
   const handleConfirmPayment = async () => {
@@ -462,7 +471,7 @@ export default function VentasPage() {
                             </div>
                             <div>
                                <p className="text-xs font-black text-indigo-900 uppercase leading-none mb-1">Puntos de {selectedCustomer.name.split(' ')[0]}</p>
-                               <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Saldo: {selectedCustomer.points || 0} pts (${totalDiscount.toFixed(2)})</p>
+                               <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Saldo: {selectedCustomer.points || 0} pts (${totalPotentialDiscount.toFixed(2)})</p>
                             </div>
                           </div>
                           <button 
