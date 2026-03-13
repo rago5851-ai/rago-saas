@@ -2,12 +2,7 @@
 
 import { cookies } from "next/headers"
 import { db, auth } from "@/lib/firebase"
-
-// ============================================================
-// AUTENTICACIÓN VÍA FIREBASE ADMIN SDK
-// (No usa API Key web — usa Service Account en el servidor)
-// Esto elimina por completo el error "unregistered callers"
-// ============================================================
+import { redirect } from "next/navigation"
 
 export async function loginAction(formData: FormData) {
   const email = formData.get("email")?.toString()
@@ -114,6 +109,7 @@ export async function loginAction(formData: FormData) {
 export async function logoutAction(formData?: FormData) {
   const cookieStore = await cookies()
   cookieStore.delete('auth_token')
+  redirect("/")
 }
 
 export async function registerAction(formData: FormData) {
