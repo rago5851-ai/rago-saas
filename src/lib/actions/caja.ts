@@ -32,20 +32,31 @@ export async function getCashRegisterState(dateFilter?: string) {
       console.log("[AUDIT] getCashRegisterState: Found last cut", { sessionStart, retainedCash });
     }
 
-    // 2. Traer ventas filtradas
-    let salesQuery = db.collection("salesHistory").where("userId", "==", userId)
-    
-    if (sessionStart) {
-      // De lo que ha pasado desde el último corte
-      salesQuery = salesQuery.where("createdAt", ">", sessionStart)
-    } else if (dateFilter) {
-      // Si no hay corte, al menos mostrar lo de 'hoy' (como en el historial)
-      const start = new Date(`${dateFilter}T00:00:00Z`)
-      const end = new Date(`${dateFilter}T23:59:59.999Z`)
-      salesQuery = salesQuery.where("createdAt", ">=", start).where("createdAt", "<=", end)
-    }
-
+    // 2. Traer TODAS las ventas del usuario y filtrar en JS
+    const salesQuery = db.collection("salesHistory").where("userId", "==", userId)
     const salesSnap = await salesQuery.get()
+    
+    const todayISO = dateFilter || new Date().toLocaleDateString('en-CA');
+
+    const filteredDocs = salesSnap.docs.filter(doc => {
+      const data = doc.data()
+      if (!data.createdAt) return false
+      const createdAt = data.createdAt.toDate()
+      
+      if (sessionStart) {
+        return createdAt > sessionStart
+      } else {
+        const docDate = createdAt.toISOString().split('T')[0]
+        return docDate === todayISO
+      }
+    })
+
+    console.log("[AUDIT] getCashRegisterState JS results", { 
+      userId, 
+      totalUserDocs: salesSnap.size,
+      foundFiltered: filteredDocs.length,
+      usingSessionStart: !!sessionStart
+    });
     console.log("[AUDIT] getCashRegisterState Results:", { 
       userId, 
       found: salesSnap.size,

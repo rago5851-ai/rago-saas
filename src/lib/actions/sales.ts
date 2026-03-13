@@ -121,21 +121,25 @@ export async function getDashboardStats(dateFilter?: string) {
       return { success: false, error: "No autorizado" }
     }
 
-    let query = db.collection("salesHistory").where("userId", "==", userId)
-
-    if (dateFilter) {
-      const start = new Date(`${dateFilter}T00:00:00Z`)
-      const end = new Date(`${dateFilter}T23:59:59.999Z`)
-      query = query.where("createdAt", ">=", start).where("createdAt", "<=", end)
-    } else {
-      // Fallback to server's today if no filter provided
-      const todayISO = new Date().toLocaleDateString('en-CA');
-      const start = new Date(`${todayISO}T00:00:00Z`);
-      const end = new Date(`${todayISO}T23:59:59.999Z`);
-      query = query.where("createdAt", ">=", start).where("createdAt", "<=", end)
-    }
-
+    const query = db.collection("salesHistory").where("userId", "==", userId)
     const snap = await query.get()
+    
+    // JS Filtering: Use todayISO to stay consistent with working logic
+    const todayISO = dateFilter || new Date().toLocaleDateString('en-CA');
+    
+    const todaySales = snap.docs.filter(doc => {
+      const data = doc.data();
+      if (!data.createdAt) return false;
+      const docDate = data.createdAt.toDate().toISOString().split('T')[0];
+      return docDate === todayISO;
+    }).map(doc => doc.data());
+
+    console.log("[AUDIT] getDashboardStats JS results", { 
+      userId, 
+      dateFilter: todayISO, 
+      totalUserDocs: snap.size,
+      foundToday: todaySales.length
+    });
     
     // DEBUG: Get a sample of documents to see why they might not match
     const sample = snap.docs.length > 0 ? snap.docs[0].data() : "NO_DOCS_FOUND";
