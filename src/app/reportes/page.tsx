@@ -61,7 +61,7 @@ export default function ReportesPage() {
                   <Trophy className="h-6 w-6 text-amber-600" />
                 </div>
                 <div className="text-left">
-                  <p className="font-black text-gray-900">Top 6 Productos</p>
+                  <p className="font-black text-gray-900">Ranking de Ventas</p>
                   <p className="text-[10px] font-bold text-gray-400 uppercase">Lo más vendido hoy</p>
                 </div>
               </button>
@@ -79,15 +79,6 @@ export default function ReportesPage() {
               </button>
             </Link>
           </div>
-        </div>
-
-        <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex items-center gap-4">
-          <div className="bg-white p-2 rounded-xl">
-             <Banknote className="h-5 w-5 text-[#2563eb]" />
-          </div>
-          <p className="text-xs font-bold text-blue-700 leading-relaxed">
-            Los datos se sincronizan automáticamente con las ventas registradas en el Dashboard.
-          </p>
         </div>
       </main>
     </div>

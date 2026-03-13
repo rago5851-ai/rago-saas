@@ -115,22 +115,31 @@ export async function getTopProducts(range: string, customStart?: string, custom
 
     sales = sales.filter(s => s.createdAt >= startDate && s.createdAt <= endDate)
 
-    const productCounts: Record<string, number> = {}
+    const productStats: Record<string, { count: number, revenue: number }> = {}
     sales.forEach((s: any) => {
       if (s.items && Array.isArray(s.items)) {
         s.items.forEach((item: any) => {
           const name = item.name || "Producto desconocido"
-          productCounts[name] = (productCounts[name] || 0) + (Number(item.quantity) || 1)
+          if (!productStats[name]) {
+            productStats[name] = { count: 0, revenue: 0 }
+          }
+          const quantity = Number(item.quantity) || 1
+          const price = Number(item.price) || 0
+          productStats[name].count += quantity
+          productStats[name].revenue += (quantity * price)
         })
       }
     })
 
-    const topProducts = Object.entries(productCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6)
+    const ranking = Object.entries(productStats)
+      .map(([name, stats]) => ({ 
+        name, 
+        count: stats.count, 
+        revenue: stats.revenue 
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
 
-    return { success: true, data: topProducts }
+    return { success: true, data: ranking }
   } catch (error) {
     console.error("Error in getTopProducts:", error)
     return { success: false, error: "Error al generar ranking" }

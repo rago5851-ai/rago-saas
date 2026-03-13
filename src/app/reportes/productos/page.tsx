@@ -43,7 +43,7 @@ export default function ProductosPage() {
               <ArrowLeft className="h-5 w-5 text-gray-900" />
             </Button>
           </Link>
-          <h1 className="text-lg font-black text-gray-900">Top Productos</h1>
+          <h1 className="text-lg font-black text-gray-900">Ranking de Ventas</h1>
           <div className="w-10" />
         </div>
       </header>
@@ -84,7 +84,7 @@ export default function ProductosPage() {
         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
           <h3 className="font-black text-gray-900 flex items-center gap-2 mb-2">
             <Trophy className="h-5 w-5 text-amber-500" />
-            Top 6 Productos
+            Ranking por Ingresos
           </h3>
 
           <div className="min-h-[200px] flex flex-col justify-center">
@@ -104,23 +104,35 @@ export default function ProductosPage() {
             ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                 {data.map((item, idx) => (
-                  <div key={item.name} className="flex items-center gap-4 group">
-                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-lg ${idx === 0 ? "bg-amber-100 text-amber-600" : "bg-gray-100 text-gray-400"}`}>
-                      {idx + 1}
+                  <div key={item.name} className="flex flex-col gap-1.5 group">
+                    <div className="flex items-center justify-between gap-3">
+                       <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className={`text-[10px] font-black shrink-0 w-4 ${idx === 0 ? "text-amber-500" : "text-gray-300"}`}>
+                            #{idx + 1}
+                          </span>
+                          <p className="font-bold text-gray-800 text-sm truncate uppercase tracking-tight">{item.name}</p>
+                       </div>
+                       <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                             <p className="text-[10px] font-bold text-gray-400 uppercase leading-none mb-0.5">{item.count} und</p>
+                             <p className="font-black text-[#2563eb] text-sm leading-none">${Number(item.revenue || 0).toLocaleString()}</p>
+                          </div>
+                          <div className="w-1.5 h-8 bg-gray-50 rounded-full overflow-hidden">
+                             <motion.div 
+                               initial={{ height: 0 }}
+                               animate={{ height: `${(Number(item.revenue) / (Number(data[0]?.revenue) || 1)) * 100}%` }}
+                               className="w-full bg-[#2563eb] absolute bottom-0"
+                             />
+                          </div>
+                       </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="font-bold text-gray-800 text-sm">{item.name}</p>
-                      <div className="w-full bg-gray-50 h-2 rounded-full mt-1 overflow-hidden">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${(Number(item.count) / (Number(data[0]?.count) || 1)) * 100}%` }}
-                          className="h-full bg-[#2563eb]"
-                        />
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-black text-gray-900">{item.count}</p>
-                      <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Unidades</p>
+                    
+                    <div className="w-full bg-gray-50 h-1 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(Number(item.revenue) / (Number(data[0]?.revenue) || 1)) * 100}%` }}
+                        className="h-full bg-[#2563eb]"
+                      />
                     </div>
                   </div>
                 ))}
