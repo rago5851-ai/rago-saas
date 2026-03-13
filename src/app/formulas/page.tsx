@@ -5,25 +5,43 @@ import { getFormulas } from "@/lib/actions/formulas";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Plus, Beaker, FileText, TrendingUp } from "lucide-react";
+import { Plus, Beaker, FileText, TrendingUp, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { deleteFormula } from "@/lib/actions/formulas";
 
 export default function FormulasPage() {
   const [formulas, setFormulas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const loadData = async () => {
+    setLoading(true);
+    const response = await getFormulas();
+    if (response.success && response.data) {
+      setFormulas(response.data);
+    }
+    setLoading(false);
+  }
 
   useEffect(() => {
-    async function loadData() {
-      const response = await getFormulas();
-      if (response.success && response.data) {
-        setFormulas(response.data);
-      }
-      setTimeout(() => setLoading(false), 300);
-    }
     loadData();
   }, []);
+
+  const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
+    e.stopPropagation();
+    if (confirm(`¿Estás seguro de eliminar la fórmula de ${name}? Esta acción no se puede deshacer.`)) {
+      setDeletingId(id);
+      const res = await deleteFormula(id);
+      if (res.success) {
+        await loadData();
+      } else {
+        alert(res.error || "Error al eliminar");
+      }
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className="flex flex-col h-full bg-gray-50 min-h-screen">
@@ -37,7 +55,7 @@ export default function FormulasPage() {
             <p className="text-xs text-gray-500">Biblioteca de Recetas</p>
           </motion.div>
           <Link href="/formulas/new">
-            <Button size="icon" className="h-10 w-10 rounded-full shadow-md shrink-0 bg-indigo-600 hover:bg-indigo-700">
+            <Button size="icon" className="h-10 w-10 rounded-full shadow-md shrink-0 bg-indigo-600 hover:bg-indigo-700 transition-colors">
               <Plus className="h-5 w-5 text-white" />
             </Button>
           </Link>
@@ -46,7 +64,7 @@ export default function FormulasPage() {
 
       <main className="flex-1 p-4 space-y-4 pb-20">
         <AnimatePresence mode="wait">
-          {loading ? (
+          {loading && formulas.length === 0 ? (
             <motion.div 
               key="loading" 
               initial={{ opacity: 0 }}
@@ -86,16 +104,39 @@ export default function FormulasPage() {
                   const costPerLiter = baseLiters > 0 ? (rawCost / baseLiters).toFixed(2) : "0.00"
 
                   return (
-                    <Card key={f.id} className="overflow-hidden bg-white border-none rounded-2xl shadow-md hover:shadow-lg transition-all">
+                    <Card key={f.id} className={`overflow-hidden bg-white border-none rounded-2xl shadow-md hover:shadow-lg transition-all ${deletingId === f.id ? "opacity-50 grayscale" : ""}`}>
                       <div 
-                        className="flex justify-between p-5 pb-4 cursor-pointer transition-colors bg-white group"
+                        className="flex justify-between items-start p-5 pb-4 cursor-pointer transition-colors bg-white group"
                         onClick={() => setExpandedId(expandedId === f.id ? null : f.id)}
                       >
-                        <div className="font-extrabold text-black text-lg leading-tight tracking-tight group-hover:text-blue-600 transition-colors">{f.name}</div>
-                        <div className="flex flex-col items-end">
-                          <span className="text-[10px] font-black bg-blue-50 text-[#007bff] px-2.5 rounded-full py-0.5 border border-blue-100">
-                            V{f.version}
-                          </span>
+                        <div className="flex-1 pr-4">
+                           <div className="font-extrabold text-black text-lg leading-tight tracking-tight group-hover:text-blue-600 transition-colors uppercase">{f.name}</div>
+                           <div className="mt-1">
+                              <span className="text-[10px] font-black bg-blue-50 text-[#007bff] px-2.5 rounded-full py-0.5 border border-blue-100">
+                                V{f.version}
+                              </span>
+                           </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                           <Link href={`/formulas/${f.id}/edit`} onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-blue-600 hover:bg-blue-50">
+                                 <Pencil className="h-4 w-4" />
+                              </Button>
+                           </Link>
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             className="h-9 w-9 rounded-xl text-red-400 hover:bg-red-50"
+                             disabled={deletingId === f.id}
+                             onClick={(e) => handleDelete(e, f.id, f.name)}
+                           >
+                              {deletingId === f.id ? (
+                                <div className="h-4 w-4 border-2 border-red-400 border-t-transparent animate-spin rounded-full" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                           </Button>
                         </div>
                       </div>
                       

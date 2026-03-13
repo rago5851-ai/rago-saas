@@ -98,3 +98,84 @@ export async function createFormula(
     return { success: false, error: "Hubo un error al guardar la fórmula" }
   }
 }
+
+export async function deleteFormula(formulaId: string) {
+  try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    const docRef = db.collection("formulas").doc(formulaId)
+    const doc = await docRef.get()
+
+    if (!doc.exists) return { success: false, error: "Fórmula no encontrada" }
+    if (doc.data()?.userId !== userId) return { success: false, error: "No tienes permiso para borrar esta fórmula" }
+
+    await docRef.delete()
+
+    revalidatePath("/formulas")
+    revalidatePath("/")
+    return { success: true }
+  } catch (error: any) {
+    console.error("Error deleting formula:", error)
+    return { success: false, error: "Error al eliminar la fórmula" }
+  }
+}
+
+export async function updateFormula(
+  formulaId: string,
+  name: string,
+  instructions: string,
+  ingredients: NewFormulaIngredient[],
+  productType: FormulaProductType = "TERMINADO"
+) {
+  try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    const docRef = db.collection("formulas").doc(formulaId)
+    const doc = await docRef.get()
+
+    if (!doc.exists) return { success: false, error: "Fórmula no encontrada" }
+    if (doc.data()?.userId !== userId) return { success: false, error: "No tienes permiso para editar esta fórmula" }
+
+    const formulaData = {
+      name,
+      instructions,
+      type: productType,
+      ingredients: ingredients.map(ing => ({
+        rawMaterialId: ing.rawMaterialId,
+        quantityKg: ing.quantityKg
+      })),
+      updatedAt: new Date(),
+    }
+
+    await docRef.update(formulaData)
+
+    revalidatePath("/formulas")
+    revalidatePath(`/formulas/${formulaId}`)
+    revalidatePath("/")
+    return { success: true }
+  } catch (error: any) {
+    console.error("Error updating formula:", error)
+    return { success: false, error: "Error al actualizar la fórmula" }
+  }
+}
+
+export async function getFormulaById(formulaId: string) {
+  try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    const docRef = db.collection("formulas").doc(formulaId)
+    const doc = await docRef.get()
+
+    if (!doc.exists) return { success: false, error: "Fórmula no encontrada" }
+    const data = doc.data()
+    if (data?.userId !== userId) return { success: false, error: "No tienes permiso" }
+
+    return { success: true, data: serializeDoc({ id: doc.id, ...data }) }
+  } catch (error: any) {
+    console.error("Error fetching formula by id:", error)
+    return { success: false, error: "Error al cargar la fórmula" }
+  }
+}
