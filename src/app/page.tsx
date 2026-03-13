@@ -179,14 +179,13 @@ export default function DashboardPage() {
               </Link>
 
               {/* Reportes */}
-              <Link href="#" className="block opacity-80">
+              <Link href="/reportes" className="block">
                 <Card className="border-none shadow-lg bg-[#2563eb] h-full min-h-[120px] rounded-2xl overflow-hidden relative group">
                   <CardContent className="p-4 flex flex-col items-center justify-center text-center relative z-10 h-full min-h-[120px]">
                     <div className="bg-white/15 p-2 rounded-xl mb-1.5 backdrop-blur-sm group-hover:scale-105 transition-transform border border-white/10">
                       <BarChart3 className="h-4 w-4 text-white" />
                     </div>
                     <div className="text-[9px] font-bold text-white/90 uppercase tracking-widest leading-tight">Reportes</div>
-                    <div className="text-[7px] text-white/50 mt-1 uppercase font-black tracking-widest">Próximamente</div>
                   </CardContent>
                   <div className="absolute -top-6 -right-6 w-16 h-16 bg-white/10 rounded-full blur-2xl"></div>
                 </Card>
