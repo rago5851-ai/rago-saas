@@ -149,3 +149,4 @@ export async function getDashboardStats(dateFilter?: string) {
     return { success: false, error: "Error al cargar estadísticas" }
   }
 }
+// Force re-deploy: Verified local build success
