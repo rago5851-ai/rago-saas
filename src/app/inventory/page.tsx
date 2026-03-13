@@ -39,9 +39,6 @@ export default function InventoryPage() {
   }
 
   function formatStock(kg: number) {
-    if (kg < 1) {
-      return `${(kg * 1000).toFixed(0)} g`;
-    }
     return `${kg.toFixed(2)} kg`;
   }
 
@@ -99,7 +96,14 @@ export default function InventoryPage() {
                   <Card key={m.id} className="overflow-hidden bg-white border-gray-100 rounded-2xl shadow-md hover:shadow-lg transition-all">
                     <div className="flex justify-between p-5 pb-4 items-start gap-4 bg-white">
                       <div className="pr-2 flex-grow">
-                        <div className="font-extrabold text-black text-lg leading-tight w-full break-words tracking-tight">{m.name}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="font-extrabold text-black text-lg leading-tight break-words tracking-tight">{m.name}</div>
+                          {m.stockKg <= 0 && (
+                            <span className="bg-red-600 text-[10px] text-white font-black px-2 py-0.5 rounded-full animate-pulse">
+                              AGOTADO
+                            </span>
+                          )}
+                        </div>
                         
                         <div className="flex gap-2 mt-4">
                           <Link href={`/inventory/${m.id}/edit`}>
@@ -118,7 +122,7 @@ export default function InventoryPage() {
                       </div>
                       
                       <div className="flex flex-col items-end shrink-0">
-                        <span className={`text-2xl font-black ${m.stockKg < 5 ? "text-red-600" : "text-indigo-600"}`}>
+                        <span className={`text-2xl font-black ${m.stockKg <= 0 ? "text-red-600 drop-shadow-sm" : m.stockKg < 5 ? "text-amber-500" : "text-indigo-600"}`}>
                           {formatStock(m.stockKg)}
                         </span>
                         <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black mt-0.5">Bodega</span>

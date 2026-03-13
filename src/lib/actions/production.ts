@@ -158,7 +158,7 @@ export async function completeWorkOrder(orderId: string, observations: string = 
 
       // Descontar inventario de ingredientes
       for (let i = 0; i < stockUpdates.length; i++) {
-        const newStock = currentStocks[i] - stockUpdates[i].requiredKg
+        const newStock = Math.max(0, currentStocks[i] - stockUpdates[i].requiredKg)
         transaction.update(stockUpdates[i].ref, { stockKg: newStock, updatedAt: new Date() })
       }
 
