@@ -23,6 +23,7 @@ export default function ClientesPage() {
   const [showLoyaltyModal, setShowLoyaltyModal] = useState(false)
   const [loyaltyConfig, setLoyaltyConfig] = useState<LoyaltyConfig | null>(null)
   const [savingLoyalty, setSavingLoyalty] = useState(false)
+  const [loadingConfig, setLoadingConfig] = useState(false)
 
   const loadClients = async (query = "") => {
     setLoading(true)
@@ -66,18 +67,24 @@ export default function ClientesPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button 
-            onClick={() => {
-              getLoyaltyConfig().then(res => {
-                if (res.success) setLoyaltyConfig(res.data as LoyaltyConfig)
-                setShowLoyaltyModal(true)
-              })
+            disabled={loadingConfig}
+            onClick={async () => {
+              setLoadingConfig(true)
+              const res = await getLoyaltyConfig()
+              if (res.success) setLoyaltyConfig(res.data as LoyaltyConfig)
+              setLoadingConfig(false)
+              setShowLoyaltyModal(true)
             }} 
-            variant="ghost" 
-            className="h-10 w-10 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 flex items-center justify-center transition-all"
+            variant="outline" 
+            className="h-10 w-10 rounded-2xl border-2 border-[#2563eb] bg-white hover:bg-blue-50 flex items-center justify-center transition-all shadow-sm active:scale-95"
           >
-            <Settings className="h-5 w-5 text-indigo-600" />
+            {loadingConfig ? (
+              <div className="h-4 w-4 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Settings className="h-5 w-5 text-[#2563eb]" />
+            )}
           </Button>
-          <Button onClick={() => setShowModal(true)} size="icon" className="h-10 w-10 rounded-xl bg-[#2563eb] hover:bg-blue-700 shadow-md transition-all active:scale-95">
+          <Button onClick={() => setShowModal(true)} size="icon" className="h-10 w-10 rounded-2xl bg-[#2563eb] hover:bg-blue-700 shadow-md transition-all active:scale-95">
             <UserPlus className="h-5 w-5 text-white" />
           </Button>
         </div>
@@ -239,59 +246,77 @@ export default function ClientesPage() {
         {showLoyaltyModal && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md flex items-center justify-center p-6"
+            className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-6"
             onClick={() => setShowLoyaltyModal(false)}
           >
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
+              className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl ring-1 ring-black/5"
               onClick={e => e.stopPropagation()}
             >
-              <div className="bg-indigo-700 p-6 flex flex-col items-center text-center">
-                <div className="h-16 w-16 bg-white/20 rounded-full flex items-center justify-center mb-4">
-                  <Star className="h-8 w-8 text-white fill-white" />
+              <div className="bg-[#2563eb] p-8 flex flex-col items-center text-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+                <div className="h-20 w-20 bg-white/20 rounded-3xl flex items-center justify-center mb-4 backdrop-blur-sm">
+                  <Settings className="h-10 w-10 text-white animate-[spin_10s_linear_infinite]" />
                 </div>
-                <h3 className="text-xl font-black text-white uppercase tracking-tight">Lealtad Rago</h3>
-                <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mt-1">Configuración del Sistema</p>
+                <h3 className="text-2xl font-black text-white uppercase tracking-tight">Lealtad Rago</h3>
+                <p className="text-blue-100 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Configuración del Sistema</p>
               </div>
 
-              <div className="p-6 space-y-6">
-                <div className="space-y-3">
-                   <p className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Estructura de Ganancia</p>
-                   <div className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 shadow-inner">
-                      <div className="flex-1">
-                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">Cada gasto de:</p>
-                        <div className="relative">
-                           <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-gray-400">$</span>
+              <div className="p-8 space-y-8">
+                <div className="space-y-4">
+                   <div className="flex justify-between items-center px-1">
+                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Estructura de Ganancia</p>
+                     <div className="h-px flex-1 bg-gray-100 ml-4" />
+                   </div>
+                   <div className="bg-gray-50 p-5 rounded-[2rem] border border-gray-100 shadow-inner space-y-4">
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Cada gasto de:</p>
+                        <div className="relative group">
+                           <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-gray-400 group-focus-within:text-[#2563eb] transition-colors">$</span>
                            <input 
                             type="number" 
-                            className="w-full h-11 pl-8 pr-4 bg-white border border-gray-200 rounded-xl font-black text-gray-800 focus:outline-none focus:border-indigo-600 transition-all shadow-sm"
-                            value={loyaltyConfig?.pointsPerSaleAmount || 0}
-                            onChange={e => setLoyaltyConfig(prev => prev ? { ...prev, pointsPerSaleAmount: Number(e.target.value) } : { pointsPerSaleAmount: Number(e.target.value), pointValue: 1 })}
+                            className="w-full h-14 pl-10 pr-4 bg-white border-2 border-transparent focus:border-[#2563eb] rounded-2xl font-black text-gray-900 focus:outline-none transition-all shadow-sm"
+                            value={loyaltyConfig?.pointsPerSaleAmount ?? ''}
+                            onChange={e => {
+                               const val = e.target.value === '' ? 0 : Number(e.target.value)
+                               setLoyaltyConfig(prev => prev ? { ...prev, pointsPerSaleAmount: val } : { pointsPerSaleAmount: val, pointValue: 1 })
+                            }}
                            />
                         </div>
                       </div>
-                      <div className="h-full pt-8 font-black text-indigo-400">=</div>
-                      <div className="w-20">
-                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">Obtiene:</p>
-                        <div className="h-11 flex items-center justify-center font-black text-indigo-700 text-lg border-b-2 border-indigo-200 bg-indigo-50/30 rounded-t-xl">
-                          1 PTO
+                      <div className="flex items-center gap-3 px-1">
+                        <div className="h-px flex-1 bg-indigo-100" />
+                        <div className="text-indigo-300 font-black">=</div>
+                        <div className="h-px flex-1 bg-indigo-100" />
+                      </div>
+                      <div className="flex items-center justify-between bg-white/60 p-4 rounded-2xl border border-indigo-50">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Obtiene:</p>
+                        <div className="font-black text-[#2563eb] text-xl flex items-center gap-2">
+                          1 <span className="text-xs text-[#2563eb]/60">PTO</span>
                         </div>
                       </div>
                    </div>
                 </div>
 
-                <div className="space-y-3">
-                   <p className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Valor de Redención</p>
-                   <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 shadow-inner">
-                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">1 Punto Equivale a:</p>
-                      <div className="relative">
-                         <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-gray-400">$</span>
+                <div className="space-y-4">
+                   <div className="flex justify-between items-center px-1">
+                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Valor de Redención</p>
+                     <div className="h-px flex-1 bg-gray-100 ml-4" />
+                   </div>
+                   <div className="bg-blue-50/50 p-5 rounded-[2rem] border border-blue-100 shadow-inner">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1 mb-2">1 Punto Equivale a:</p>
+                      <div className="relative group">
+                         <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-gray-400 group-focus-within:text-[#2563eb] transition-colors">$</span>
                          <input 
                           type="number" 
-                          className="w-full h-11 pl-8 pr-4 bg-white border border-gray-200 rounded-xl font-black text-gray-800 focus:outline-none focus:border-indigo-600 transition-all shadow-sm"
-                          value={loyaltyConfig?.pointValue || 0}
-                          onChange={e => setLoyaltyConfig(prev => prev ? { ...prev, pointValue: Number(e.target.value) } : { pointValue: Number(e.target.value), pointsPerSaleAmount: 100 })}
+                          step="0.01"
+                          className="w-full h-14 pl-10 pr-4 bg-white border-2 border-transparent focus:border-[#2563eb] rounded-2xl font-black text-gray-900 focus:outline-none transition-all shadow-sm"
+                          value={loyaltyConfig?.pointValue ?? ''}
+                          onChange={e => {
+                            const val = e.target.value === '' ? 0 : Number(e.target.value)
+                            setLoyaltyConfig(prev => prev ? { ...prev, pointValue: val } : { pointValue: val, pointsPerSaleAmount: 100 })
+                          }}
                          />
                       </div>
                    </div>
@@ -299,7 +324,7 @@ export default function ClientesPage() {
 
                 <Button 
                   disabled={savingLoyalty}
-                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-lg rounded-2xl shadow-xl shadow-indigo-600/30 active:scale-[0.98] transition-all"
+                  className="w-full h-16 bg-[#2563eb] hover:bg-blue-700 text-white font-black text-lg rounded-[1.5rem] shadow-xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                   onClick={async () => {
                     if (loyaltyConfig) {
                       setSavingLoyalty(true)
@@ -309,7 +334,11 @@ export default function ClientesPage() {
                     }
                   }}
                 >
-                  {savingLoyalty ? "Guardando..." : "Guardar Configuración"}
+                  {savingLoyalty ? (
+                    <div className="h-5 w-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>Guardar Configuración</>
+                  )}
                 </Button>
               </div>
             </motion.div>
