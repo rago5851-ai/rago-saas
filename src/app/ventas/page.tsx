@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react"
 import { getProductInventory, processCheckout, CartItem, PaymentMethod } from "@/lib/actions/sales"
 import {
   Search, Plus, Minus, ShoppingCart, Package2, X,
-  CheckCircle2, CreditCard, ArrowRightLeft, Banknote, ChevronRight
+  CheckCircle2, CreditCard, ArrowRightLeft, Banknote, ChevronRight, Trash2
 } from "lucide-react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
@@ -46,7 +46,8 @@ export default function VentasPage() {
 
   const filtered = useMemo(() => {
     const q = normalize(search.trim())
-    return products.filter(p => (q === "" || normalize(p.name).includes(q)) && p.stockLiters > 0)
+    if (!q) return []
+    return products.filter(p => normalize(p.name).includes(q) && p.stockLiters > 0)
   }, [products, search])
 
   const addToCart = (p: Product) => {
@@ -59,16 +60,25 @@ export default function VentasPage() {
 
   const removeFromCart = (id: string) => {
     setCart(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    })
+  }
+
+  const updateQty = (id: string, delta: number) => {
+    setCart(prev => {
       const item = prev[id]
-      if (!item || item.qty <= 0) return prev
-      if (item.qty === 1) { const next = { ...prev }; delete next[id]; return next }
-      return { ...prev, [id]: { ...item, qty: item.qty - 1 } }
+      if (!item) return prev
+      const newQty = Math.max(0.1, item.qty + delta)
+      return { ...prev, [id]: { ...item, qty: newQty } }
     })
   }
 
   const cartItems = Object.values(cart).filter(i => i.qty > 0)
   const total = cartItems.reduce((s, i) => s + i.qty * i.product.salePrice, 0)
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
+  const hasIncompleteStock = cartItems.some(i => i.qty > i.product.stockLiters)
 
   const cashPaid = parseFloat(cashInput) || 0
   const change = cashPaid - total
@@ -132,74 +142,125 @@ export default function VentasPage() {
         </div>
       </header>
 
-      <main className="flex-1 p-4 pb-64 space-y-3">
+      <main className="flex-1 p-4 pb-64 space-y-6">
+        {/* RESULTADOS DE BÚSQUEDA */}
         <AnimatePresence mode="wait">
-          {loading ? (
-            <motion.div 
-              key="loading" 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-3"
-            >
-              {[1, 2, 3, 4].map(i => (
-                <Skeleton key={i} className="h-24 w-full rounded-2xl" />
-              ))}
-            </motion.div>
-          ) : (
+          {search.trim() !== "" && (
             <motion.div
-              key="content"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               className="space-y-3"
             >
-              {filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-8 text-center text-gray-500 bg-white rounded-2xl border border-dashed mt-6">
-                  <Package2 className="h-12 w-12 mb-4 text-gray-300" />
-                  <p className="text-sm font-medium">{products.length === 0 ? "No hay productos con stock disponible." : "Sin resultados."}</p>
-                  {products.length === 0 && (
-                    <Link href="/production" className="text-indigo-600 font-bold text-xs mt-3 hover:underline">Ir a Producción</Link>
-                  )}
+              <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest px-1">Resultados</h2>
+              {loading ? (
+                <Skeleton className="h-24 w-full rounded-2xl" />
+              ) : filtered.length === 0 ? (
+                <div className="p-4 bg-white rounded-2xl border border-dashed text-center text-gray-400 text-sm">
+                  No se encontraron productos con stock.
                 </div>
               ) : (
-                filtered.map(p => {
-                  const inCart = cart[p.id]?.qty || 0
-                  return (
-                    <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                      <div className="bg-indigo-600 px-4 py-2.5 flex items-center justify-between">
-                        <p className="font-black text-white text-base leading-tight truncate mr-2">{p.name}</p>
-                        <span className="text-amber-300 font-black text-lg shrink-0">
-                          ${p.salePrice != null ? p.salePrice.toFixed(2) : "—"}<span className="text-indigo-200 text-xs font-bold">/L</span>
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between px-4 py-3 gap-3">
-                        <span className={`text-sm font-bold ${p.stockLiters < 5 ? "text-red-500" : "text-emerald-600"}`}>
-                          {p.stockLiters.toFixed(1)} L disponibles
-                        </span>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {inCart > 0 && (
-                            <>
-                              <button onClick={() => removeFromCart(p.id)}
-                                className="h-9 w-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
-                                <Minus className="h-4 w-4 text-gray-600" />
-                              </button>
-                              <span className="w-7 text-center font-black text-gray-900 text-base">{inCart}</span>
-                            </>
-                          )}
-                          <button onClick={() => addToCart(p)} disabled={inCart >= p.stockLiters}
-                            className="h-9 w-9 rounded-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 flex items-center justify-center transition-colors shadow-sm">
-                            <Plus className="h-4 w-4 text-white" />
-                          </button>
-                        </div>
-                      </div>
+                filtered.map(p => (
+                  <div key={p.id} className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="font-black text-gray-900 truncate uppercase tracking-tight">{p.name}</p>
+                      <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">${p.salePrice.toFixed(2)} / Litro</p>
                     </div>
-                  )
-                })
+                    <Button 
+                      onClick={() => addToCart(p)}
+                      disabled={cart[p.id] !== undefined}
+                      className="h-10 w-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-md shrink-0"
+                    >
+                      <Plus className="h-5 w-5" />
+                    </Button>
+                  </div>
+                ))
               )}
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* VENTA ACTUAL (CARRITO) */}
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-sm font-black text-gray-900 uppercase tracking-widest">Venta Actual</h2>
+            <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded-md uppercase">
+              {cartItems.length} Producto{cartItems.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+
+          <AnimatePresence>
+            {cartItems.length === 0 ? (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center p-12 text-center text-gray-400 bg-white rounded-3xl border border-dashed border-gray-200"
+              >
+                <ShoppingCart className="h-10 w-10 mb-3 opacity-20 text-indigo-600" />
+                <p className="text-sm font-medium">Usa el buscador para<br/>agregar productos a la venta</p>
+              </motion.div>
+            ) : (
+              <div className="space-y-3">
+                {cartItems.map(i => (
+                  <motion.div
+                    key={i.product.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className={`bg-white rounded-[2rem] border ${i.qty > i.product.stockLiters ? 'border-red-200' : 'border-gray-100'} shadow-sm overflow-hidden`}
+                  >
+                    <div className="px-5 py-4 flex flex-col gap-3">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1">
+                          <p className="font-black text-gray-900 text-lg leading-tight uppercase tracking-tight">{i.product.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest ${i.qty > i.product.stockLiters ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                               Stock: {i.product.stockLiters.toFixed(2)} L
+                             </span>
+                             <span className="text-[10px] font-bold text-gray-400 tracking-wider">${i.product.salePrice.toFixed(2)}/L</span>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => removeFromCart(i.product.id)}
+                          className="p-2.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                        <div className="flex items-center gap-3">
+                          <button 
+                            onClick={() => updateQty(i.product.id, -1)}
+                            className="h-10 w-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 active:scale-95 transition-all"
+                          >
+                            <Minus className="h-5 w-5" />
+                          </button>
+                          <div className="flex flex-col items-center min-w-[60px]">
+                            <span className="text-xl font-black text-gray-900">{i.qty.toFixed(2)}</span>
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Litros</span>
+                          </div>
+                          <button 
+                            onClick={() => updateQty(i.product.id, 1)}
+                            disabled={i.qty >= i.product.stockLiters}
+                            className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white hover:bg-indigo-700 active:scale-95 transition-all disabled:bg-gray-200 disabled:text-gray-400"
+                          >
+                            <Plus className="h-5 w-5" />
+                          </button>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Subtotal</p>
+                          <p className="text-xl font-black text-indigo-700">${(i.qty * i.product.salePrice).toFixed(2)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </AnimatePresence>
+        </div>
       </main>
 
       {/* Sticky cart + cobrar */}
@@ -226,8 +287,8 @@ export default function VentasPage() {
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
                   <p className="text-2xl font-black text-gray-900">${total.toFixed(2)}</p>
                 </div>
-                <Button onClick={openModal}
-                  className="h-14 px-8 text-base font-black rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/30 shrink-0">
+                <Button onClick={openModal} disabled={hasIncompleteStock}
+                  className="h-14 px-8 text-base font-black rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/30 shrink-0 disabled:bg-gray-300">
                   Cobrar
                 </Button>
               </div>
