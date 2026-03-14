@@ -27,7 +27,7 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadData() {
       setLoading(true)
-      const todayISO = new Date().toLocaleDateString('en-CA')
+      const todayISO = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Merida' })
       const [formulasRes, ordersRes, inventoryRes, statsRes, clientsRes] = await Promise.all([
         getFormulas(),
         getWorkOrders(),

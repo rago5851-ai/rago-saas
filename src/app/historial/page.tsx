@@ -17,7 +17,7 @@ const METHOD_COLOR: Record<string, string> = {
 }
 
 export default function HistorialPage() {
-  const todayISO = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD en formato local
+  const todayISO = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Merida' }) // Hoy en Merida
   const [sales, setSales] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState(todayISO)
@@ -69,7 +69,7 @@ export default function HistorialPage() {
           sales.map((sale: any, idx: number) => {
             const MethodIcon = METHOD_ICON[sale.paymentMethod] || Receipt
             const methodColor = METHOD_COLOR[sale.paymentMethod] || "bg-gray-100 text-gray-600"
-            const time = sale.createdAt ? new Date(sale.createdAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "—"
+            const time = sale.createdAt ? new Date(sale.createdAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", timeZone: "America/Merida" }) : "—"
             const hasChange = sale.paymentMethod === "EFECTIVO" && sale.change > 0
 
             return (
