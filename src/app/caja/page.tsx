@@ -75,7 +75,7 @@ export default function CajaPage() {
 
   const rows = [
     { label: "Efectivo", icon: Banknote, color: "text-emerald-600", bg: "bg-emerald-50", value: caja?.efectivo ?? 0 },
-    { label: "Tarjeta Crédito / Débito", icon: CreditCard, color: "text-indigo-600", bg: "bg-indigo-50", value: caja?.tarjeta ?? 0 },
+    { label: "Tarjeta Crédito / Débito", icon: CreditCard, color: "text-blue-600", bg: "bg-blue-50", value: caja?.tarjeta ?? 0 },
     { label: "Transferencia", icon: ArrowRightLeft, color: "text-purple-600", bg: "bg-purple-50", value: caja?.transferencia ?? 0 },
   ]
 
@@ -130,7 +130,7 @@ export default function CajaPage() {
                 ))}
               </div>
 
-              <div className="bg-indigo-700 rounded-2xl px-5 py-5 flex justify-between items-center shadow-md">
+              <div className="bg-blue-600 rounded-2xl px-5 py-5 flex justify-between items-center shadow-md">
                 <span className="text-indigo-100 font-bold text-base">Total General</span>
                 <span className="text-white text-3xl font-black">${caja?.total?.toFixed(2) ?? "0.00"}</span>
               </div>
@@ -237,7 +237,7 @@ export default function CajaPage() {
                         </div>
                         <div className="flex justify-between items-center text-sm border-t pt-2">
                           <span className="text-gray-500">Queda como Fondo:</span>
-                          <span className="font-black text-indigo-600">
+                          <span className="font-black text-blue-600">
                             ${(manualCount - withdrawAmount).toFixed(2)}
                           </span>
                         </div>
@@ -278,11 +278,11 @@ export default function CajaPage() {
                       </div>
                       <div className="flex justify-between border-t pt-3">
                         <span className="text-gray-500">Queda en caja</span>
-                        <span className="font-black text-indigo-600">${cutResult.cashRetained.toFixed(2)}</span>
+                        <span className="font-black text-blue-600">${cutResult.cashRetained.toFixed(2)}</span>
                       </div>
                     </div>
 
-                    <Button onClick={closeModal} className="w-full h-14 mt-6 font-black rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white">
+                    <Button onClick={closeModal} className="w-full h-14 mt-6 font-black rounded-2xl bg-blue-600 hover:bg-blue-700 text-white">
                       Cerrar
                     </Button>
                   </div>

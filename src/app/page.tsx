@@ -59,12 +59,12 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full bg-white min-h-screen">
-      {/* Header — elegant indigo */}
-      <header className="sticky top-0 z-10 bg-indigo-600 px-6 pt-12 pb-6 shadow-sm rounded-b-[1.5rem]">
+      {/* Header — azul principal */}
+      <header className="sticky top-0 z-10 bg-blue-600 px-6 pt-12 pb-6 shadow-lg rounded-b-[1.5rem]">
         <div className="flex justify-between items-center max-w-lg mx-auto w-full">
           <div className="text-white">
             <h1 className="text-xl font-extrabold tracking-tight">Rago POS</h1>
-            <p className="text-indigo-100/80 text-[10px] font-bold uppercase tracking-widest">Panel de Control</p>
+            <p className="text-blue-100/90 text-[10px] font-bold uppercase tracking-widest">Panel de Control</p>
           </div>
           <div className="flex gap-2">
             <motion.div 

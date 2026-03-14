@@ -190,7 +190,16 @@ export async function processCheckout(
     revalidatePath("/caja")
     revalidatePath("/")
     
-    return { success: true, total: Math.round(total * 100) / 100 }
+    const discountAmount = Math.round(pointsToRedeem * config.pointValue * 100) / 100
+    return { 
+      success: true, 
+      total: Math.round(total * 100) / 100,
+      totalOriginal: Math.round(totalOriginal * 100) / 100,
+      pointsRedeemed: pointsToRedeem,
+      discountAmount,
+      pointsEarned,
+      pointValue: config.pointValue,
+    }
   } catch (error: any) {
     console.error("Checkout error:", error?.message || error)
     return { success: false, error: error.message || "Error al procesar el cobro" }

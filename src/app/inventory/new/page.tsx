@@ -85,7 +85,7 @@ export default function NewRawMaterialPage() {
             </CardContent>
           </Card>
 
-          <Button type="submit" disabled={loading} className="w-full text-lg font-black text-white bg-indigo-700 hover:bg-indigo-800 h-14 rounded-xl shadow-lg">
+          <Button type="submit" disabled={loading} className="w-full text-lg font-black text-white bg-blue-600 hover:bg-blue-700 h-14 rounded-xl shadow-lg">
             {loading ? "Guardando..." : "Guardar Insumo"}
           </Button>
         </form>

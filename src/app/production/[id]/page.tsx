@@ -114,7 +114,7 @@ export default function WorkOrderDetailPage() {
               <div className="col-span-3 text-right">Vol (L)</div>
             </div>
             <div className="divide-y divide-gray-100">
-              {order.formula.FormulaIngredients?.map((ing: any) => {
+              {order.formula.FormulaIngredients?.map((ing: any, idx: number) => {
                 const rawKg = ing.quantityKg * scaleFactor
                 const scaledL = (rawKg / ing.rawMaterial.densityKgL).toFixed(2)
                 
@@ -126,7 +126,7 @@ export default function WorkOrderDetailPage() {
                 }
                 
                 return (
-                  <div key={ing.id} className={`grid grid-cols-12 gap-2 items-center px-4 py-3.5 transition-colors ${isFinished ? 'bg-gray-50/50 opacity-60' : 'hover:bg-indigo-50/30'}`}>
+                  <div key={ing.rawMaterialId || idx} className={`grid grid-cols-12 gap-2 items-center px-4 py-3.5 transition-colors ${isFinished ? 'bg-gray-50/50 opacity-60' : 'hover:bg-indigo-50/30'}`}>
                     <div className="col-span-5 sm:col-span-6 pr-2">
                       <p className="font-semibold text-gray-900 leading-tight line-clamp-2">{ing.rawMaterial.name}</p>
                       <p className="text-[10px] text-gray-400 mt-0.5">Stock lib: {ing.rawMaterial.stockKg < 1 ? (ing.rawMaterial.stockKg * 1000).toFixed(0) + ' g' : ing.rawMaterial.stockKg.toFixed(2) + ' kg'}</p>

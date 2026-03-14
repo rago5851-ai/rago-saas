@@ -23,12 +23,12 @@ export function MobileNav() {
               href={href}
               className={`flex flex-col items-center justify-center gap-0.5 px-2 transition-colors ${
                 active
-                  ? "text-indigo-600"
+                  ? "text-blue-600"
                   : "text-gray-400 hover:text-gray-600"
               }`}
             >
               <Icon className={`h-5 w-5 ${active ? "stroke-[2.5px]" : ""}`} />
-              <span className={`text-[10px] font-bold ${active ? "text-indigo-600" : ""}`}>
+              <span className={`text-[10px] font-bold ${active ? "text-blue-600" : ""}`}>
                 {label}
               </span>
             </Link>

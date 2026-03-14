@@ -26,9 +26,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect from login to home/inventory if session exists
+  // Si ya hay sesión y entran a login, mandar a Inicio
   if (pathname === '/login' && hasSession) {
-    return NextResponse.redirect(new URL('/inventory', request.url))
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
   return NextResponse.next()

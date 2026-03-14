@@ -55,7 +55,7 @@ export default function FormulasPage() {
             <p className="text-xs text-gray-500">Biblioteca de Recetas</p>
           </motion.div>
           <Link href="/formulas/new">
-            <Button size="icon" className="h-10 w-10 rounded-full shadow-md shrink-0 bg-indigo-600 hover:bg-indigo-700 transition-colors">
+            <Button size="icon" className="h-10 w-10 rounded-full shadow-md shrink-0 bg-blue-600 hover:bg-blue-700 transition-colors">
               <Plus className="h-5 w-5 text-white" />
             </Button>
           </Link>
@@ -174,9 +174,9 @@ export default function FormulasPage() {
                                   <div key={ing.id || i} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 mb-2 last:border-0 last:mb-0 last:pb-0">
                                     <div>
                                       <p className="font-semibold text-gray-700 leading-snug">{ing.rawMaterial?.name || "Insumo no encontrado"}</p>
-                                      <p className="text-xs text-gray-400 mt-0.5">{weightText} <span className="text-indigo-400/80">({percentage}%)</span></p>
+                                      <p className="text-xs text-gray-400 mt-0.5">{weightText} <span className="text-blue-400/80">({percentage}%)</span></p>
                                     </div>
-                                    <div className="font-bold text-indigo-600">${cost}</div>
+                                    <div className="font-bold text-blue-600">${cost}</div>
                                   </div>
                                 )
                               })}

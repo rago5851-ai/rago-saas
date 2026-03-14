@@ -12,7 +12,7 @@ const METHOD_ICON: Record<string, any> = {
 }
 const METHOD_COLOR: Record<string, string> = {
   EFECTIVO: "bg-emerald-100 text-emerald-700",
-  TARJETA: "bg-indigo-100 text-indigo-700",
+  TARJETA: "bg-blue-100 text-blue-700",
   TRANSFERENCIA: "bg-purple-100 text-purple-700",
 }
 
@@ -53,7 +53,7 @@ export default function HistorialPage() {
           type="date"
           value={dateFilter}
           onChange={e => setDateFilter(e.target.value)}
-          className="w-full h-12 rounded-xl border-2 border-indigo-200 focus:border-indigo-500 focus:outline-none px-4 text-base font-bold text-gray-800 bg-white"
+          className="w-full h-12 rounded-xl border-2 border-blue-200 focus:border-blue-500 focus:outline-none px-4 text-base font-bold text-gray-800 bg-white"
         />
       </div>
 

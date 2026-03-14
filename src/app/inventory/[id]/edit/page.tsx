@@ -51,7 +51,7 @@ export default function EditRawMaterialPage() {
     }
   }
 
-  if (loading) return <div className="p-8 text-indigo-900 font-bold text-center">Cargando datos...</div>
+  if (loading) return <div className="p-8 text-blue-900 font-bold text-center">Cargando datos...</div>
   if (!initialData) return <div className="p-8 text-red-500 font-bold text-center">{error}</div> 
 
   return (
@@ -112,7 +112,7 @@ export default function EditRawMaterialPage() {
             </CardContent>
           </Card>
 
-          <Button type="submit" disabled={saving} className="w-full text-lg font-black text-white bg-indigo-700 hover:bg-indigo-800 h-14 rounded-xl shadow-lg mt-8">
+          <Button type="submit" disabled={saving} className="w-full text-lg font-black text-white bg-blue-600 hover:bg-blue-700 h-14 rounded-xl shadow-lg mt-8">
             {saving ? "Guardando..." : "Actualizar Insumo"}
           </Button>
         </form>
