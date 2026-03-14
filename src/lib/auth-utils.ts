@@ -6,6 +6,11 @@ export async function getUserId() {
   const sessionCookie = cookieStore.get('auth_token')?.value
   if (!sessionCookie) return null
 
+  if (!auth) {
+    console.warn("[AUTH] Firebase Auth no disponible — verifica variables de entorno")
+    return null
+  }
+
   try {
     const decodedToken = await auth.verifySessionCookie(sessionCookie, true)
     console.log("[AUTH-AUDIT] User verified:", decodedToken.uid)

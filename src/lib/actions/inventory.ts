@@ -1,9 +1,8 @@
 "use server"
 
-import { db, auth } from "@/lib/firebase"
+import { db } from "@/lib/firebase"
 import { serializeDoc } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
-import { cookies } from "next/headers"
 import { getUserId } from "@/lib/auth-utils"
 
 export async function getRawMaterials() {
@@ -52,7 +51,15 @@ export async function createRawMaterial(formData: FormData) {
 
     revalidatePath("/inventory")
     revalidatePath("/")
-    return { success: true, data: { id: docRef.id, ...data } }
+    return {
+      success: true,
+      data: {
+        id: docRef.id,
+        ...data,
+        createdAt: data.createdAt.toISOString(),
+        updatedAt: data.updatedAt.toISOString(),
+      },
+    }
   } catch (error) {
     console.error("Error creating material:", error)
     return { success: false, error: "Hubo un error al guardar el insumo" }

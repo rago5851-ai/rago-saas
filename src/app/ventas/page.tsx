@@ -48,10 +48,19 @@ export default function VentasPage() {
     })
   }
 
+  const DEFAULT_LOYALTY = { pointsPerSaleAmount: 100, pointValue: 1 }
+
   const loadConfig = () => {
     getLoyaltyConfig().then(res => {
-      if (res.success) setLoyaltyConfig(res.data as LoyaltyConfig)
-    })
+      if (res.success && res.data) {
+        setLoyaltyConfig({
+          pointsPerSaleAmount: Number(res.data.pointsPerSaleAmount) || 100,
+          pointValue: Number(res.data.pointValue) || 1,
+        } as LoyaltyConfig)
+      } else {
+        setLoyaltyConfig(DEFAULT_LOYALTY as LoyaltyConfig)
+      }
+    }).catch(() => setLoyaltyConfig(DEFAULT_LOYALTY as LoyaltyConfig))
   }
 
   useEffect(() => { 

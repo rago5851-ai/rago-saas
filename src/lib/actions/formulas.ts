@@ -92,7 +92,15 @@ export async function createFormula(
 
     revalidatePath("/formulas")
     revalidatePath("/")
-    return { success: true, data: { id: docRef.id, ...formulaData } }
+    return {
+      success: true,
+      data: {
+        id: docRef.id,
+        ...formulaData,
+        createdAt: formulaData.createdAt.toISOString(),
+        updatedAt: formulaData.updatedAt.toISOString(),
+      },
+    }
   } catch (error) {
     console.error("Error creating formula:", error)
     return { success: false, error: "Hubo un error al guardar la fórmula" }

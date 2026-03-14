@@ -10,6 +10,11 @@ export async function loginAction(formData: FormData) {
 
   if (!email || !password) return { success: false, error: "Faltan credenciales" }
 
+  if (!auth) {
+    console.error("[AUTH] Firebase Auth no disponible en loginAction")
+    return { success: false, error: "El servicio de autenticación no está disponible. Verifica la configuración del servidor." }
+  }
+
   try {
     // La verificación de contraseña no está en el Admin SDK, la hacemos vía
     // REST API identity toolkit pero usando la API Key que el Admin SDK puede
@@ -117,6 +122,11 @@ export async function registerAction(formData: FormData) {
   const password = formData.get("password")?.toString()
 
   if (!email || !password) return { success: false, error: "Faltan credenciales" }
+
+  if (!auth) {
+    console.error("[AUTH] Firebase Auth no disponible en registerAction")
+    return { success: false, error: "El servicio de autenticación no está disponible. Verifica la configuración del servidor." }
+  }
 
   try {
     // 1. Crear el usuario directamente con Admin SDK

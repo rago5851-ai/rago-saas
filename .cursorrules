@@ -1,0 +1,55 @@
+# Rago SaaS Project Rules (.cursorrules)
+
+You are an expert AI assistant specialized in Next.js, TypeScript, Tailwind CSS, and Firebase. You are helping to develop "Rago SaaS", a multi-tenant platform for managing business operations (Inventory, Sales, Formulas, Production).
+
+## Tech Stack
+- **Framework**: Next.js 16+ (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS 4 (using `@tailwindcss/postcss`)
+- **Backend/Database**: Firebase (Firestore, Auth, Firebase Admin for server-side)
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+- **Utils**: clsx, tailwind-merge, date-fns
+
+## Directory Structure
+- `src/app`: Next.js App Router pages and layouts.
+- `src/components`: UI components (radix-like/shadcn style).
+  - `ui`: Base UI components (Button, Input, Card).
+  - `layout`: Navigation and layout-specific components.
+  - `charts`: Visualizations using Framer Motion or standard SVG/CSS.
+- `src/lib`: Core logic and utilities.
+  - `actions`: Next.js Server Actions for data mutations and fetching.
+  - `firebase.ts`: Client-side Firebase initialization.
+  - `firestore-utils.ts`: Helpers for Firestore operations.
+  - `auth-utils.ts`: Authentication-related helpers.
+- `src/scripts`: Maintenance or initialization scripts.
+
+## Coding Standards
+
+### TypeScript
+- Always use strict typing. Avoid `any`.
+- Define interfaces for data models (Clients, Products, Formulas, etc.).
+- Use Zod (or similar) for validation if needed, though mostly relying on TS interfaces currently.
+
+### Components
+- Prefer Functional Components with TypeScript.
+- Use `use client` directive ONLY when client-side interactivity is required.
+- Maintain consistent styling using Tailwind CSS. Follow the "Premium Design" principle: vibrant colors (Royal Blue #2563eb), elegant spacing, and smooth transitions.
+
+### Server Actions
+- All data fetching and mutations should go through Server Actions in `src/lib/actions`.
+- Implement robust error handling (try/catch) and return serialized responses.
+- Ensure multi-tenant isolation by checking `user_id` in all Firestore queries.
+
+### UI/UX
+- Use Framer Motion for micro-animations and page transitions.
+- Ensure the interface is responsive and mobile-friendly.
+- Follow the established aesthetic: Glassmorphism, subtle gradients, and clear typography (Inter/Roboto).
+
+## Data Isolation (Multi-tenancy)
+- Every document in Firestore MUST have a `userId` or `ownerId` field.
+- Every query MUST filter by the current authenticated user's ID to prevent data leakage between tenants.
+
+## Common Tasks
+- **Creating a new section**: Add a route in `src/app`, create a page.tsx, and define necessary actions in `src/lib/actions`.
+- **Modifying UI**: Update `index.css` or component-specific classes using Tailwind.

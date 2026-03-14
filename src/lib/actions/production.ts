@@ -83,7 +83,15 @@ export async function createWorkOrder(formulaId: string, targetVolumeLiters: num
 
     revalidatePath("/production")
     revalidatePath("/")
-    return { success: true, data: { id: orderRef.id, ...orderData } }
+    return {
+      success: true,
+      data: {
+        id: orderRef.id,
+        ...orderData,
+        createdAt: orderData.createdAt.toISOString(),
+        updatedAt: orderData.updatedAt.toISOString(),
+      },
+    }
   } catch (error) {
     return { success: false, error: "Error al crear la orden de producción" }
   }

@@ -1,11 +1,11 @@
 "use server"
 
-import { db, auth } from "@/lib/firebase"
+import { db } from "@/lib/firebase"
 import { getUserId } from "@/lib/auth-utils"
 import { getMeridaDayRange } from "@/lib/date-utils"
-import { serializeDoc } from "@/lib/firestore-utils"
+import { serializeDoc, sanitizeResponse } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
-import { subDays, startOfMonth, format, isWithinInterval, parseISO } from "date-fns"
+import { subDays, startOfMonth, format, parseISO } from "date-fns"
 import { toZonedTime } from "date-fns-tz"
 
 const TIMEZONE = "America/Merida"
@@ -68,7 +68,7 @@ export async function getSalesReport(range: string, customStart?: string, custom
       .map(([date, total]) => ({ date, total }))
       .sort((a, b) => a.date.localeCompare(b.date))
 
-    return { success: true, data: chartData }
+    return sanitizeResponse({ success: true, data: chartData })
   } catch (error) {
     console.error("Error in getSalesReport:", error)
     return { success: false, error: "Error al generar reporte" }
@@ -139,7 +139,7 @@ export async function getTopProducts(range: string, customStart?: string, custom
       }))
       .sort((a, b) => b.revenue - a.revenue)
 
-    return { success: true, data: ranking }
+    return sanitizeResponse({ success: true, data: ranking })
   } catch (error) {
     console.error("Error in getTopProducts:", error)
     return { success: false, error: "Error al generar ranking" }
@@ -165,12 +165,11 @@ export async function getCashCutsHistory() {
       return serializeDoc({
         id: doc.id,
         ...data,
-        userName, // Por ahora asumimos que el que lo ve es el que lo hizo o el dueño
-        createdAt: data.createdAt?.toDate() || new Date()
+        userName,
       })
-    }).sort((a: any, b: any) => b.createdAt - a.createdAt)
+    }).sort((a: any, b: any) => (b.createdAt || "").localeCompare(a.createdAt || ""))
 
-    return { success: true, data: cuts }
+    return sanitizeResponse({ success: true, data: cuts })
   } catch (error) {
     console.error("Error fetching cash cuts:", error)
     return { success: false, error: "No se pudieron cargar los cortes" }
