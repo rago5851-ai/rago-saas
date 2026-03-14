@@ -2,7 +2,7 @@
 
 import { db, auth } from "@/lib/firebase"
 import { cookies } from "next/headers"
-import { serializeDoc } from "@/lib/firestore-utils"
+import { serializeDoc, sanitizeResponse } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
 import { getUserId } from "@/lib/auth-utils"
 import { getMeridaDayRange, getMeridaTodayStr } from "@/lib/date-utils"
@@ -17,10 +17,10 @@ export async function getProductInventory() {
       .get()
 
     const items = snapshot.docs
-      .map(doc => serializeDoc({ id: doc.id, ...doc.data() }))
-      .sort((a: any, b: any) => a.name.localeCompare(b.name))
+      .map((doc) => serializeDoc({ id: doc.id, ...(doc.data() as Record<string, unknown>) }))
+      .sort((a: any, b: any) => (a.name ?? "").localeCompare(b.name ?? ""))
 
-    return { success: true, data: items }
+    return sanitizeResponse({ success: true, data: items })
   } catch (error: any) {
     console.error("Error fetching product inventory:", error?.message || error)
     return { success: false, error: "No se pudo cargar el catálogo" }
@@ -50,12 +50,18 @@ export async function getLoyaltyConfig() {
     
     if (!doc.exists) {
       console.log("[LOYALTY] No config found, using defaults for user:", userId)
-      return { success: true, data: DEFAULT_LOYALTY_CONFIG }
+      return sanitizeResponse({ success: true, data: DEFAULT_LOYALTY_CONFIG })
     }
 
-    const data = doc.data() as LoyaltyConfig
+    const data = doc.data() as Record<string, unknown>
     console.log("[LOYALTY] Config loaded:", data)
-    return { success: true, data }
+    return sanitizeResponse({
+      success: true,
+      data: {
+        pointsPerSaleAmount: (data?.pointsPerSaleAmount as number) ?? DEFAULT_LOYALTY_CONFIG.pointsPerSaleAmount,
+        pointValue: (data?.pointValue as number) ?? DEFAULT_LOYALTY_CONFIG.pointValue,
+      },
+    })
   } catch (error) {
     console.error("[LOYALTY] Load error:", error)
     return { success: false, error: "Error al cargar configuración" }
@@ -184,7 +190,16 @@ export async function processCheckout(
     revalidatePath("/caja")
     revalidatePath("/")
     
-    return { success: true, total: Math.round(total * 100) / 100 }
+    const discountAmount = Math.round(pointsToRedeem * config.pointValue * 100) / 100
+    return { 
+      success: true, 
+      total: Math.round(total * 100) / 100,
+      totalOriginal: Math.round(totalOriginal * 100) / 100,
+      pointsRedeemed: pointsToRedeem,
+      discountAmount,
+      pointsEarned,
+      pointValue: config.pointValue,
+    }
   } catch (error: any) {
     console.error("Checkout error:", error?.message || error)
     return { success: false, error: error.message || "Error al procesar el cobro" }
@@ -206,9 +221,11 @@ export async function getSalesHistory(dateFilter?: string) {
     const snap = await query.orderBy("createdAt", "desc").get()
     console.log("[AUDIT] getSalesHistory", { userId, dateFilter, count: snap.size });
 
-    const sales = snap.docs.map(doc => serializeDoc({ id: doc.id, ...doc.data() }))
+    const sales = snap.docs.map((doc) =>
+      serializeDoc({ id: doc.id, ...(doc.data() as Record<string, unknown>) })
+    )
 
-    return { success: true, data: sales }
+    return sanitizeResponse({ success: true, data: sales })
   } catch (error: any) {
     console.error("Error fetching sales history [FULL ERROR]:", error);
     return { success: false, error: "No se pudo cargar el historial. Revisa los logs para errores de índices." }
@@ -245,7 +262,10 @@ export async function getDashboardStats(dateFilter?: string) {
     const todayTotal = todaySales.reduce((sum: number, s: any) => sum + (s.total || 0), 0)
     const todayCount = todaySales.length
 
-    return { success: true, data: { todayTotal: Math.round(todayTotal * 100) / 100, todayCount } }
+    return sanitizeResponse({
+      success: true,
+      data: { todayTotal: Math.round(todayTotal * 100) / 100, todayCount },
+    })
   } catch (error: any) {
     console.error("Error fetching dashboard stats [FULL ERROR]:", error)
     return { success: false, error: "Error al cargar estadísticas" }

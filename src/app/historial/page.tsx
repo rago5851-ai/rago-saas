@@ -12,12 +12,12 @@ const METHOD_ICON: Record<string, any> = {
 }
 const METHOD_COLOR: Record<string, string> = {
   EFECTIVO: "bg-emerald-100 text-emerald-700",
-  TARJETA: "bg-indigo-100 text-indigo-700",
+  TARJETA: "bg-blue-100 text-blue-700",
   TRANSFERENCIA: "bg-purple-100 text-purple-700",
 }
 
 export default function HistorialPage() {
-  const todayISO = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD en formato local
+  const todayISO = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Merida' }) // Hoy en Merida
   const [sales, setSales] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState(todayISO)
@@ -53,7 +53,7 @@ export default function HistorialPage() {
           type="date"
           value={dateFilter}
           onChange={e => setDateFilter(e.target.value)}
-          className="w-full h-12 rounded-xl border-2 border-indigo-200 focus:border-indigo-500 focus:outline-none px-4 text-base font-bold text-gray-800 bg-white"
+          className="w-full h-12 rounded-xl border-2 border-blue-200 focus:border-blue-500 focus:outline-none px-4 text-base font-bold text-gray-800 bg-white"
         />
       </div>
 
@@ -69,7 +69,7 @@ export default function HistorialPage() {
           sales.map((sale: any, idx: number) => {
             const MethodIcon = METHOD_ICON[sale.paymentMethod] || Receipt
             const methodColor = METHOD_COLOR[sale.paymentMethod] || "bg-gray-100 text-gray-600"
-            const time = sale.createdAt ? new Date(sale.createdAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "—"
+            const time = sale.createdAt ? new Date(sale.createdAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", timeZone: "America/Merida" }) : "—"
             const hasChange = sale.paymentMethod === "EFECTIVO" && sale.change > 0
 
             return (

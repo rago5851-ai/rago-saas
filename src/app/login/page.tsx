@@ -19,7 +19,7 @@ export default function LoginPage() {
     const action = isRegister ? registerAction : loginAction
     const res = await action(formData)
     if (res.success) {
-      router.push("/inventory")
+      router.push("/")
       router.refresh()
     } else {
       setError(res.error || (isRegister ? "Error al registrarse" : "Credenciales incorrectas"))
@@ -28,9 +28,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-indigo-950 px-6 pb-20">
-      <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden mt- -20">
-        <div className="bg-indigo-700 px-6 py-8 text-center text-white space-y-2 relative overflow-hidden">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 px-6 pb-20">
+      <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden -mt-20">
+        <div className="bg-blue-600 px-6 py-8 text-center text-white space-y-2 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10">
             <Lock className="h-48 w-48 text-white -mt-10 -mr-10" />
           </div>
@@ -39,7 +39,7 @@ export default function LoginPage() {
                <User className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-2xl font-black tracking-tight">Acceso Rago</h1>
-            <p className="text-indigo-200 text-sm font-medium">Sistema de Producción y Costeo</p>
+            <p className="text-blue-100 text-sm font-medium">Sistema de Producción y Costeo</p>
           </div>
         </div>
         
@@ -58,7 +58,7 @@ export default function LoginPage() {
                 name="email" 
                 type="email" 
                 placeholder="admin@rago.com" 
-                className="pl-10 h-12 text-base font-bold bg-white border-gray-300 text-black placeholder:text-gray-300 shadow-sm"
+                className="pl-10 h-12 text-base font-bold bg-white border-gray-300 text-black placeholder:text-gray-300 shadow-sm focus-visible:ring-blue-600"
                 required 
               />
             </div>
@@ -72,7 +72,7 @@ export default function LoginPage() {
                 name="password" 
                 type="password" 
                 placeholder="••••••••" 
-                className="pl-10 h-12 text-base font-bold bg-white border-gray-300 text-black placeholder:text-gray-300 shadow-sm"
+                className="pl-10 h-12 text-base font-bold bg-white border-gray-300 text-black placeholder:text-gray-300 shadow-sm focus-visible:ring-blue-600"
                 required 
               />
             </div>
@@ -82,7 +82,7 @@ export default function LoginPage() {
             <Button 
               type="submit" 
               disabled={loading} 
-              className="w-full h-14 text-lg font-black text-white bg-indigo-700 hover:bg-indigo-800 rounded-xl shadow-lg transition-transform active:scale-95"
+              className="w-full h-14 text-lg font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg transition-transform active:scale-95"
             >
               {loading ? "Procesando..." : (isRegister ? "Crear Cuenta" : "Iniciar Sesión")}
             </Button>
@@ -91,7 +91,7 @@ export default function LoginPage() {
               <button 
                 type="button" 
                 onClick={() => setIsRegister(!isRegister)}
-                className="text-sm font-bold text-indigo-600 hover:underline"
+                className="text-sm font-bold text-blue-600 hover:underline"
               >
                 {isRegister ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate"}
               </button>

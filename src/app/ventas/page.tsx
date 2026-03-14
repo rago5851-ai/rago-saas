@@ -6,7 +6,7 @@ import { getClientByPhone } from "@/lib/actions/clients"
 import {
   Search, Plus, Minus, ShoppingCart, Package2, X,
   CheckCircle2, CreditCard, ArrowRightLeft, Banknote, ChevronRight, Trash2, 
-  Phone, UserPlus, Star, Settings, Check
+  Phone, UserPlus, Star, Settings, Check, Send
 } from "lucide-react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
@@ -30,7 +30,17 @@ export default function VentasPage() {
   const [method, setMethod] = useState<PaymentMethod>("EFECTIVO")
   const [cashInput, setCashInput] = useState("")
   const [checkingOut, setCheckingOut] = useState(false)
-  const [successData, setSuccessData] = useState<{ total: number; change: number } | null>(null)
+  const [successData, setSuccessData] = useState<{
+    total: number
+    change: number
+    totalOriginal?: number
+    pointsRedeemed?: number
+    discountAmount?: number
+    pointsEarned?: number
+    items?: CartItem[]
+    customerName?: string
+    customerPhone?: string
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
   
   // Loyalty state
@@ -48,10 +58,19 @@ export default function VentasPage() {
     })
   }
 
+  const DEFAULT_LOYALTY = { pointsPerSaleAmount: 100, pointValue: 1 }
+
   const loadConfig = () => {
     getLoyaltyConfig().then(res => {
-      if (res.success) setLoyaltyConfig(res.data as LoyaltyConfig)
-    })
+      if (res.success && res.data) {
+        setLoyaltyConfig({
+          pointsPerSaleAmount: Number(res.data.pointsPerSaleAmount) || 100,
+          pointValue: Number(res.data.pointValue) || 1,
+        } as LoyaltyConfig)
+      } else {
+        setLoyaltyConfig(DEFAULT_LOYALTY as LoyaltyConfig)
+      }
+    }).catch(() => setLoyaltyConfig(DEFAULT_LOYALTY as LoyaltyConfig))
   }
 
   useEffect(() => { 
@@ -161,7 +180,17 @@ export default function VentasPage() {
       redeemPoints
     )
     if (result.success) {
-      setSuccessData({ total: result.total!, change: method === "EFECTIVO" ? change : 0 })
+      setSuccessData({
+        total: result.total!,
+        change: method === "EFECTIVO" ? change : 0,
+        totalOriginal: result.totalOriginal,
+        pointsRedeemed: result.pointsRedeemed,
+        discountAmount: result.discountAmount,
+        pointsEarned: result.pointsEarned,
+        items: payload,
+        customerName: selectedCustomer?.name,
+        customerPhone: selectedCustomer?.phone || customerPhone,
+      })
       setStep("SUCCESS")
       setCart({})
       loadProducts()
@@ -174,7 +203,7 @@ export default function VentasPage() {
   return (
     <div className="flex flex-col h-full bg-gray-50 min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-indigo-700 px-4 pt-6 pb-4 shadow-lg">
+      <header className="sticky top-0 z-10 bg-blue-600 px-4 pt-6 pb-4 shadow-lg">
         <div className="flex items-center justify-between mb-3">
           <motion.div
             initial={{ x: -10, opacity: 0 }}
@@ -252,7 +281,7 @@ export default function VentasPage() {
                 >
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Cliente no registrado</p>
                   <Link href="/clientes">
-                    <Button variant="ghost" className="h-7 px-3 text-[10px] font-black text-indigo-600 hover:bg-indigo-50 flex items-center gap-1 group">
+                    <Button variant="ghost" className="h-7 px-3 text-[10px] font-black text-blue-600 hover:bg-blue-50 flex items-center gap-1 group">
                       <UserPlus className="h-3 w-3" />
                       REGISTRAR CLIENTE
                     </Button>
@@ -288,7 +317,7 @@ export default function VentasPage() {
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-gray-900 text-sm truncate uppercase tracking-tight">{p.name}</p>
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-black text-indigo-600 tracking-wider">${p.salePrice.toFixed(2)}</span>
+                        <span className="text-[9px] font-black text-blue-600 tracking-wider">${p.salePrice.toFixed(2)}</span>
                         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{p.stockLiters.toFixed(1)} L disp.</span>
                       </div>
                     </div>
@@ -372,7 +401,7 @@ export default function VentasPage() {
                           <button 
                             onClick={() => updateQty(i.product.id, 1)}
                             disabled={i.qty >= i.product.stockLiters}
-                            className="h-8 w-8 rounded-lg bg-indigo-700 flex items-center justify-center text-white shadow-md shadow-indigo-200 active:scale-95 transition-all disabled:bg-gray-200 disabled:shadow-none"
+                            className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-200 active:scale-95 transition-all disabled:bg-gray-200 disabled:shadow-none"
                           >
                             <Plus className="h-4 w-4" />
                           </button>
@@ -402,7 +431,7 @@ export default function VentasPage() {
             exit={{ y: 100 }}
             className="fixed bottom-16 left-0 right-0 z-30 px-3 pb-3"
           >
-            <div className="bg-indigo-800 rounded-2xl shadow-2xl flex items-center justify-between p-4 border border-white/10 gap-4">
+            <div className="bg-blue-600 rounded-2xl shadow-2xl flex items-center justify-between p-4 border border-white/10 gap-4">
               <div className="flex-1">
                 <p className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-0.5">Total a Pagar</p>
                 <p className="text-2xl font-black text-white tabular-nums">${totalFinal.toFixed(2)}</p>
@@ -446,7 +475,7 @@ export default function VentasPage() {
               <div className="overflow-y-auto flex-1">
                 {step !== "SUCCESS" && (
                   <>
-                    <div className="bg-indigo-700 px-6 pt-6 pb-8 relative">
+                    <div className="bg-blue-600 px-6 pt-6 pb-8 relative">
                       <button onClick={closeModal} disabled={checkingOut}
                         className="absolute top-4 right-4 h-8 w-8 flex items-center justify-center rounded-full bg-white/20 text-white">
                         <X className="h-4 w-4" />
@@ -471,13 +500,13 @@ export default function VentasPage() {
                             </div>
                             <div>
                                <p className="text-xs font-black text-indigo-900 uppercase leading-none mb-1">Puntos de {selectedCustomer.name.split(' ')[0]}</p>
-                               <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Saldo: {selectedCustomer.points || 0} pts (${totalPotentialDiscount.toFixed(2)})</p>
+                               <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Saldo: {selectedCustomer.points || 0} pts (${totalPotentialDiscount.toFixed(2)})</p>
                             </div>
                           </div>
                           <button 
                             onClick={() => setRedeemPoints(!redeemPoints)}
                             disabled={selectedCustomer.points <= 0}
-                            className={`px-3 py-1.5 rounded-full text-[10px] font-black transition-all ${redeemPoints ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-indigo-600 border border-indigo-100 active:bg-indigo-50'} disabled:opacity-50`}
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-black transition-all ${redeemPoints ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 border border-blue-100 active:bg-blue-50'} disabled:opacity-50`}
                           >
                             {redeemPoints ? ' CANJEADO' : ' CANJEAR'}
                           </button>
@@ -528,7 +557,7 @@ export default function VentasPage() {
                             {cashPaid > 0 && cashPaid >= totalFinal && (
                               <div className="flex justify-between px-2 py-1">
                                 <span className="text-sm font-medium text-gray-500">Cambio a entregar</span>
-                                <span className="text-lg font-black text-indigo-700">${change.toFixed(2)}</span>
+                                <span className="text-lg font-black text-blue-700">${change.toFixed(2)}</span>
                               </div>
                             )}
                           </div>
@@ -539,7 +568,7 @@ export default function VentasPage() {
                           <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${method === "TARJETA" ? "bg-indigo-500" : "bg-gray-200"}`}>
                             <CreditCard className={`h-5 w-5 ${method === "TARJETA" ? "text-white" : "text-gray-500"}`} />
                           </div>
-                          <p className={`font-bold text-base ${method === "TARJETA" ? "text-indigo-800" : "text-gray-700"}`}>Tarjeta Crédito / Débito</p>
+                          <p className={`font-bold text-base ${method === "TARJETA" ? "text-blue-800" : "text-gray-700"}`}>Tarjeta Crédito / Débito</p>
                         </button>
 
                         <button onClick={() => setMethod("TRANSFERENCIA")}
@@ -569,26 +598,78 @@ export default function VentasPage() {
                       <CheckCircle2 className="h-10 w-10 text-emerald-500" />
                     </div>
                     <h2 className="text-3xl font-black text-gray-900 mb-1">¡Listo!</h2>
-                    <p className="text-gray-500 text-sm mb-8">Venta registrada correctamente</p>
+                    <p className="text-gray-500 text-sm mb-6">Venta registrada correctamente</p>
 
                     <div className="w-full bg-gray-50 rounded-2xl p-5 space-y-3 text-left">
-                      <div className="flex justify-between items-center">
+                      {successData.totalOriginal != null && successData.totalOriginal > successData.total && (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-500 font-medium">Subtotal</span>
+                            <span className="font-bold text-gray-700 line-through">${successData.totalOriginal.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-emerald-600 font-bold flex items-center gap-1">
+                              <Star className="h-4 w-4 fill-current" /> Descuento por puntos ({successData.pointsRedeemed ?? 0} pts = ${successData.discountAmount?.toFixed(2) ?? "0.00"})
+                            </span>
+                            <span className="font-bold text-emerald-600">-${successData.discountAmount?.toFixed(2) ?? "0.00"}</span>
+                          </div>
+                        </>
+                      )}
+                      <div className="flex justify-between items-center border-t border-gray-200 pt-3">
                         <span className="text-gray-500 font-medium">Total cobrado</span>
                         <span className="text-2xl font-black text-gray-900">${successData.total.toFixed(2)}</span>
                       </div>
                       {method === "EFECTIVO" && (
-                        <div className="flex justify-between items-center border-t border-gray-200 pt-3">
+                        <div className="flex justify-between items-center">
                           <span className="text-gray-500 font-medium">Cambio a entregar</span>
-                          <span className="text-2xl font-black text-indigo-600">${successData.change.toFixed(2)}</span>
+                          <span className="text-xl font-black text-indigo-600">${successData.change.toFixed(2)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between items-center border-t border-gray-200 pt-3">
+                      <div className="flex justify-between items-center">
                         <span className="text-gray-500 font-medium">Método</span>
                         <span className="font-bold text-gray-700">{method}</span>
                       </div>
+                      {successData.pointsEarned != null && successData.pointsEarned > 0 && (
+                        <div className="flex justify-between items-center border-t border-indigo-100 pt-3">
+                          <span className="text-blue-600 font-bold text-sm">Puntos ganados</span>
+                          <span className="font-black text-blue-600">+{successData.pointsEarned} pts</span>
+                        </div>
+                      )}
                     </div>
 
-                    <Button onClick={closeModal} className="w-full h-14 mt-6 text-base font-black rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white">
+                    {(() => {
+                      const phone = (successData.customerPhone || "").replace(/\D/g, "")
+                      const hasPhone = phone.length >= 10
+                      const waNum = phone.length === 10 ? `52${phone}` : phone.length === 12 && phone.startsWith("52") ? phone : phone.length >= 10 ? `52${phone.slice(-10)}` : ""
+                      const ticketLines = [
+                        "🏪 *RAGO - Ticket de Venta*",
+                        "",
+                        "📦 *Productos:*",
+                        ...(successData.items || []).map((i: CartItem) => `• ${i.name}: ${i.quantity}L × $${i.pricePerLiter.toFixed(2)} = $${(i.quantity * i.pricePerLiter).toFixed(2)}`),
+                        "",
+                        successData.totalOriginal != null && successData.totalOriginal > successData.total
+                          ? `Subtotal: $${successData.totalOriginal.toFixed(2)}\nDescuento (puntos): -$${successData.discountAmount?.toFixed(2) ?? "0.00"}`
+                          : "",
+                        `*Total: $${successData.total.toFixed(2)}*`,
+                        "",
+                        `💵 Método: ${method}`,
+                        method === "EFECTIVO" ? `🔄 Cambio: $${successData.change.toFixed(2)}` : "",
+                        successData.pointsEarned ? `⭐ Puntos ganados: ${successData.pointsEarned}` : "",
+                        "",
+                        "Gracias por tu compra 🙏"
+                      ].filter(Boolean)
+                      const waText = encodeURIComponent(ticketLines.join("\n"))
+                      const waUrl = hasPhone && waNum ? `https://wa.me/${waNum}?text=${waText}` : null
+                      return waUrl ? (
+                        <a href={waUrl} target="_blank" rel="noopener noreferrer"
+                          className="w-full mt-4 h-14 flex items-center justify-center gap-2 rounded-2xl border-2 border-emerald-500 text-emerald-600 font-black bg-white hover:bg-emerald-50 transition-colors">
+                          <Send className="h-5 w-5" />
+                          Enviar ticket por WhatsApp
+                        </a>
+                      ) : null
+                    })()}
+
+                    <Button onClick={closeModal} className="w-full h-14 mt-4 text-base font-black rounded-2xl bg-blue-600 hover:bg-blue-700 text-white">
                       Nueva Venta
                     </Button>
                   </div>

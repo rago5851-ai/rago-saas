@@ -10,10 +10,14 @@ if (!admin.apps.length) {
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       }),
     });
-  } catch (error: any) {
-    console.error('Firebase admin initialization error', error.stack);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error('Firebase admin initialization error', err?.stack ?? err);
   }
 }
 
-export const db = admin.apps.length ? admin.firestore() : null as unknown as admin.firestore.Firestore;
-export const auth = admin.apps.length ? admin.auth() : null as unknown as admin.auth.Auth;
+/** Firestore: puede ser null si la inicialización falló. Las Server Actions lo manejan con try/catch. */
+export const db = admin.apps.length ? admin.firestore() : (null as unknown as admin.firestore.Firestore);
+
+/** Auth: puede ser null si la inicialización falló. getUserId() debe verificar antes de usar. */
+export const auth: admin.auth.Auth | null = admin.apps.length ? admin.auth() : null;

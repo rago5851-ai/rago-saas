@@ -1,14 +1,24 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Mapeamos las rutas principales que queremos proteger
-const protectedRoutes = ['/inventory', '/formulas', '/production']
+// Todas las rutas que requieren autenticación
+const protectedRoutes = [
+  '/',
+  '/inventory',
+  '/formulas',
+  '/production',
+  '/ventas',
+  '/clientes',
+  '/historial',
+  '/caja',
+  '/cortes',
+  '/fabricacion',
+  '/reportes',
+]
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  
-  // Protect specific routes and the root dashboard
-  const isProtected = protectedRoutes.some(route => pathname.startsWith(route)) || pathname === '/'
+  const isProtected = pathname === '/' || protectedRoutes.some(route => route !== '/' && pathname.startsWith(route))
   
   const hasSession = request.cookies.has('auth_token')
 
@@ -16,14 +26,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect from login to home/inventory if session exists
+  // Si ya hay sesión y entran a login, mandar a Inicio
   if (pathname === '/login' && hasSession) {
-    return NextResponse.redirect(new URL('/inventory', request.url))
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|login).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }

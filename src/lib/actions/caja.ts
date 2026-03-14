@@ -1,7 +1,6 @@
 "use server"
 
-import { db, auth } from "@/lib/firebase"
-import { cookies } from "next/headers"
+import { db } from "@/lib/firebase"
 import { serializeDoc } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
 import { getUserId } from "@/lib/auth-utils"
