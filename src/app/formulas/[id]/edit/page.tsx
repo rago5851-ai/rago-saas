@@ -51,13 +51,13 @@ export default function EditFormulaPage() {
         }
 
         if (formRes.success && formRes.data) {
-          const f = formRes.data
-          setName(f.name)
-          setInstructions(f.instructions || "")
-          setProductType(f.type || "TERMINADO")
+          const f = formRes.data as { name?: string; instructions?: string; type?: string; ingredients?: Array<{ rawMaterialId: string; quantityKg?: number }> }
+          setName(String(f.name ?? ""))
+          setInstructions(String(f.instructions ?? ""))
+          setProductType((f.type as FormulaProductType) || "TERMINADO")
           
           if (f.ingredients && f.ingredients.length > 0) {
-            setIngredients(f.ingredients.map((ing: any) => ({
+            setIngredients(f.ingredients.map((ing) => ({
               id: Math.random().toString(36).substring(2),
               rawMaterialId: ing.rawMaterialId,
               quantityGramos: ((ing.quantityKg || 0) * 1000).toString()
