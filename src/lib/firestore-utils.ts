@@ -11,7 +11,12 @@ function toPlainValue(value: unknown): unknown {
   if (typeof (value as { toDate?: unknown }).toDate === "function") {
     return (value as { toDate: () => Date }).toDate().toISOString()
   }
-  // Date (toISOString works even across bundles)
+  // Firestore Timestamp serializado ({ _seconds, _nanoseconds })
+  const objLike = value as { _seconds?: number; _nanoseconds?: number }
+  if (typeof objLike._seconds === "number" && typeof objLike._nanoseconds === "number") {
+    return new Date(objLike._seconds * 1000 + objLike._nanoseconds / 1e6).toISOString()
+  }
+  // Date (toISOString)
   if (typeof (value as Date).toISOString === "function") {
     return (value as Date).toISOString()
   }
