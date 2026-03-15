@@ -9,16 +9,17 @@ import {
   getLoyaltyConfig,
   LoyaltyConfig,
 } from "@/lib/actions/sales"
-import { getClientByPhone } from "@/lib/actions/clients"
-import { Search, ShoppingCart } from "lucide-react"
+import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-  VentasSearchArea,
-  VentasLoyaltyCard,
   VentasCartPanel,
   VentasCheckoutModal,
+  VentasClienteModal,
+  VentasDescuentoModal,
+  VentasProductoManualModal,
+  VentasSearchModal,
   type Product,
   type Cart,
 } from "@/components/ventas"
@@ -43,6 +44,8 @@ export default function VentasPage() {
     pointsRedeemed?: number
     discountAmount?: number
     pointsEarned?: number
+    manualDiscount?: number
+    saleComment?: string
     items?: CartItem[]
     customerName?: string
     customerPhone?: string
@@ -56,9 +59,14 @@ export default function VentasPage() {
     phone?: string
     points?: number
   } | null>(null)
-  const [searchingCustomer, setSearchingCustomer] = useState(false)
+  const [showClienteModal, setShowClienteModal] = useState(false)
   const [redeemPoints, setRedeemPoints] = useState(false)
   const [loyaltyConfig, setLoyaltyConfig] = useState<LoyaltyConfig | null>(null)
+  const [opcionesMenuOpen, setOpcionesMenuOpen] = useState(false)
+  const [showDescuentoModal, setShowDescuentoModal] = useState(false)
+  const [showProductoManualModal, setShowProductoManualModal] = useState(false)
+  const [manualDiscountAmount, setManualDiscountAmount] = useState(0)
+  const [manualDiscountComment, setManualDiscountComment] = useState("")
 
   const loadProducts = () => {
     setLoading(true)
@@ -90,23 +98,6 @@ export default function VentasPage() {
     loadConfig()
   }, [])
 
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (customerPhone.length >= 10) {
-        setSearchingCustomer(true)
-        const res = await getClientByPhone(customerPhone)
-        if (res.success)
-        setSelectedCustomer(
-          (res.data ?? null) as { id?: string; name?: string; phone?: string; points?: number } | null
-        )
-        setSearchingCustomer(false)
-      } else {
-        setSelectedCustomer(null)
-      }
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [customerPhone])
-
   const normalize = (str: string) =>
     str.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase()
 
@@ -120,11 +111,13 @@ export default function VentasPage() {
     })
   }, [products, search])
 
-  const addToCart = (p: Product) => {
+  const addToCart = (p: Product, quantity: number = 1) => {
     setCart((prev) => {
-      const qty = prev[p.id]?.qty || 0
-      if (qty >= p.stockLiters) return prev
-      return { ...prev, [p.id]: { product: p, qty: qty + 1 } }
+      const current = prev[p.id]?.qty || 0
+      const maxAllowed = p.stockLiters
+      const toAdd = Math.min(quantity, Math.max(0, maxAllowed - current))
+      if (toAdd <= 0) return prev
+      return { ...prev, [p.id]: { product: p, qty: current + toAdd } }
     })
   }
 
@@ -145,14 +138,31 @@ export default function VentasPage() {
   const cartItems = Object.values(cart).filter((i) => i.qty > 0)
   const total = cartItems.reduce((s, i) => s + i.qty * i.product.salePrice, 0)
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
-  const hasIncompleteStock = cartItems.some((i) => i.qty > i.product.stockLiters)
+  const hasIncompleteStock = cartItems.some(
+    (i) => !i.product.id.startsWith("manual-") && i.qty > i.product.stockLiters
+  )
+
+  const addManualProduct = (name: string, price: number) => {
+    const id = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    const manualProduct: Product = {
+      id,
+      name: name.trim() || "Producto manual",
+      salePrice: price,
+      stockLiters: Infinity,
+      unit: "pz",
+    }
+    setCart((prev) => ({
+      ...prev,
+      [id]: { product: manualProduct, qty: 1 },
+    }))
+  }
 
   const totalPotentialDiscount =
     selectedCustomer && loyaltyConfig
       ? (selectedCustomer.points ?? 0) * loyaltyConfig.pointValue
       : 0
   const totalDiscount = redeemPoints ? totalPotentialDiscount : 0
-  const totalFinal = Math.max(0, total - totalDiscount)
+  const totalFinal = Math.max(0, total - totalDiscount - manualDiscountAmount)
   const pointsToEarn = Math.floor(
     totalFinal / (loyaltyConfig?.pointsPerSaleAmount ?? 100)
   )
@@ -171,10 +181,20 @@ export default function VentasPage() {
 
   const closeModal = () => {
     if (!checkingOut) {
+      // Si cerramos desde la pantalla de éxito (Nueva Venta), quitar el cliente para la siguiente venta
+      if (successData != null) {
+        setSelectedCustomer(null)
+        setCustomerPhone("")
+      }
       setShowModal(false)
       setSuccessData(null)
-      setCart({})
+      // No vaciar el carrito al cerrar (solo al completar): el usuario puede agregar más y cobrar después
     }
+  }
+
+  const clearManualDiscount = () => {
+    setManualDiscountAmount(0)
+    setManualDiscountComment("")
   }
 
   const handleConfirmPayment = async () => {
@@ -189,13 +209,16 @@ export default function VentasPage() {
       name: i.product.name,
       quantity: i.qty,
       pricePerLiter: i.product.salePrice,
+      manual: i.product.id.startsWith("manual-"),
     }))
     const result = await processCheckout(
       payload,
       method,
       method === "EFECTIVO" ? cashPaid : totalFinal,
       selectedCustomer?.id,
-      redeemPoints
+      redeemPoints,
+      manualDiscountAmount,
+      manualDiscountComment
     )
     if (result.success) {
       setSuccessData({
@@ -205,12 +228,16 @@ export default function VentasPage() {
         pointsRedeemed: result.pointsRedeemed,
         discountAmount: result.discountAmount,
         pointsEarned: result.pointsEarned,
+        manualDiscount: manualDiscountAmount,
+        saleComment: manualDiscountComment || undefined,
         items: payload,
         customerName: selectedCustomer?.name,
         customerPhone: selectedCustomer?.phone ?? customerPhone,
       })
       setStep("SUCCESS")
       setCart({})
+      setManualDiscountAmount(0)
+      setManualDiscountComment("")
       loadProducts()
     } else {
       setError(result.error ?? "Error al cobrar")
@@ -222,30 +249,16 @@ export default function VentasPage() {
     <div className="flex flex-col lg:flex-row lg:min-h-screen bg-slate-50/80">
       {/* Header unificado: móvil + escritorio con gradiente y búsqueda */}
       <header className="lg:border-b border-slate-200/80 bg-gradient-to-b from-white to-slate-50/50 px-4 py-4 lg:px-8 lg:py-5 shadow-sm sticky top-0 z-10 backdrop-blur-sm bg-white/95 lg:bg-gradient-to-b lg:from-white lg:to-slate-50/50">
-        <div className="max-w-6xl mx-auto flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
-          <div className="flex items-center justify-between lg:shrink-0">
-            <motion.div initial={{ x: -10, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
-              <h1 className="text-xl lg:text-2xl font-bold text-slate-800 tracking-tight">
-                Punto de venta
-              </h1>
-              <p className="text-slate-500 text-xs mt-0.5">
-                Busca el producto y agrega al carrito
-              </p>
-            </motion.div>
-            {cartCount > 0 && (
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="relative lg:hidden"
-              >
-                <ShoppingCart className="h-7 w-7 text-slate-600" />
-                <span className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
-                  {cartCount}
-                </span>
-              </motion.div>
-            )}
-          </div>
-          <div className="relative flex-1 max-w-2xl focus-within:ring-2 focus-within:ring-[var(--primary)]/20 focus-within:rounded-2xl transition-shadow">
+        <div className="max-w-6xl mx-auto flex flex-col gap-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
+            <h1 className="text-xl lg:text-2xl font-bold text-slate-800 tracking-tight">
+              Punto de venta
+            </h1>
+            <p className="text-slate-500 text-xs mt-0.5">
+              Busca el producto y agrega al carrito
+            </p>
+          </motion.div>
+          <div className="relative w-full focus-within:ring-2 focus-within:ring-[var(--primary)]/20 focus-within:rounded-2xl transition-shadow">
             <Search className="absolute left-4 lg:left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
             <Input
               type="search"
@@ -256,102 +269,128 @@ export default function VentasPage() {
               aria-label="Buscar producto"
             />
           </div>
-          <div className="hidden lg:block shrink-0">
-            <AnimatePresence mode="wait">
-              {cartCount > 0 ? (
-                <motion.div
-                  key="with-items"
-                  initial={{ scale: 0.95, opacity: 0.8 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.95, opacity: 0.8 }}
-                  className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-[var(--primary)] text-white shadow-lg shadow-blue-500/25"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  <span className="text-sm font-bold tabular-nums">
-                    {cartCount} en carrito
-                  </span>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0.8 }}
-                  animate={{ opacity: 1 }}
-                  className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-slate-100 text-slate-500"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  <span className="text-sm font-medium">Carrito vacío</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
         </div>
       </header>
 
-      <main className="flex-1 p-5 pb-24 lg:pb-6 lg:pt-6 lg:px-8 lg:grid lg:grid-cols-[1fr_300px_380px] lg:gap-6 lg:items-start lg:max-w-7xl lg:mx-auto space-y-6 lg:space-y-0">
-        {/* Columna 1: Búsqueda + en móvil Lealtad y Carrito */}
-        <div className="space-y-6 lg:space-y-4">
-          <VentasSearchArea
-            search={search}
-            onSearchChange={setSearch}
-            filtered={filtered}
-            loading={loading}
-            isInCart={(id) => cart[id] != null}
-            onAddToCart={addToCart}
-          />
-
-          <div className="lg:hidden">
-            <VentasLoyaltyCard
-              customerPhone={customerPhone}
-              onCustomerPhoneChange={setCustomerPhone}
-              selectedCustomer={selectedCustomer}
-              onClearCustomer={() => {
-                setCustomerPhone("")
-                setSelectedCustomer(null)
+      <main className="flex-1 p-5 pb-24 lg:pb-6 lg:pt-6 lg:px-8 lg:max-w-4xl lg:mx-auto space-y-6">
+        {/* Botones Clientes y Opciones debajo de la barra */}
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedCustomer ? (
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setShowClienteModal(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  setShowClienteModal(true)
+                }
               }}
-              searchingCustomer={searchingCustomer}
-            />
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50 cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                Cliente: {selectedCustomer.name ?? "—"}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCustomerPhone("")
+                    setSelectedCustomer(null)
+                  }}
+                  className="rounded p-0.5 hover:bg-slate-200 text-slate-500"
+                  aria-label="Quitar cliente"
+                >
+                  ×
+                </button>
+              </span>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowClienteModal(true)}
+              className="rounded-xl border-slate-200 bg-white hover:bg-slate-50"
+            >
+              Clientes
+            </Button>
+          )}
+          <div className="relative">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpcionesMenuOpen((v) => !v)}
+              className="rounded-xl border-slate-200 bg-white hover:bg-slate-50"
+            >
+              Opciones
+            </Button>
+            {opcionesMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  aria-hidden
+                  onClick={() => setOpcionesMenuOpen(false)}
+                />
+                <div className="absolute left-0 top-full z-20 mt-1 min-w-[200px] rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                  <button
+                    type="button"
+                    className="w-full px-4 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    onClick={() => {
+                      setShowDescuentoModal(true)
+                      setOpcionesMenuOpen(false)
+                    }}
+                  >
+                    Añadir descuento
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full px-4 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    onClick={() => {
+                      setShowProductoManualModal(true)
+                      setOpcionesMenuOpen(false)
+                    }}
+                  >
+                    Producto manual
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-
-          <div className="lg:hidden">
-            <VentasCartPanel
-              variant="inline"
-              cartItems={cartItems}
-              totalFinal={totalFinal}
-              hasIncompleteStock={hasIncompleteStock}
-              onUpdateQty={updateQty}
-              onClearCart={() => setCart({})}
-              onCheckout={openModal}
-            />
-          </div>
+          {manualDiscountAmount > 0 && (
+            <span className="text-sm text-slate-600">
+              Descuento: ${manualDiscountAmount.toFixed(2)}
+              {manualDiscountComment ? ` (${manualDiscountComment})` : ""}
+              <button
+                type="button"
+                onClick={clearManualDiscount}
+                className="ml-1 text-red-600 hover:underline"
+              >
+                Quitar
+              </button>
+            </span>
+          )}
         </div>
 
-        {/* Columna 2: Lealtad — solo escritorio */}
-        <aside className="hidden lg:block lg:sticky lg:top-4 h-fit">
-          <VentasLoyaltyCard
-            customerPhone={customerPhone}
-            onCustomerPhoneChange={setCustomerPhone}
-            selectedCustomer={selectedCustomer}
-            onClearCustomer={() => {
-              setCustomerPhone("")
-              setSelectedCustomer(null)
-            }}
-            searchingCustomer={searchingCustomer}
-          />
-        </aside>
+        <VentasCartPanel
+          variant="inline"
+          cartItems={cartItems}
+          totalFinal={totalFinal}
+          hasIncompleteStock={hasIncompleteStock}
+          onUpdateQty={updateQty}
+          onClearCart={() => setCart({})}
+          onCheckout={openModal}
+        />
 
-        {/* Columna 3: Carrito — solo escritorio */}
-        <aside className="hidden lg:block lg:sticky lg:top-4 space-y-4">
-          <VentasCartPanel
-            variant="sidebar"
-            cartItems={cartItems}
-            totalFinal={totalFinal}
-            hasIncompleteStock={hasIncompleteStock}
-            onUpdateQty={updateQty}
-            onClearCart={() => setCart({})}
-            onCheckout={openModal}
-          />
-        </aside>
       </main>
+
+      <VentasSearchModal
+        open={search.trim() !== ""}
+        onClose={() => setSearch("")}
+        search={search}
+        onSearchChange={setSearch}
+        filtered={filtered}
+        loading={loading}
+        onAddToCart={addToCart}
+      />
 
       {/* FAB móvil: total + Cobrar */}
       <AnimatePresence>
@@ -393,6 +432,34 @@ export default function VentasPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <VentasClienteModal
+        open={showClienteModal}
+        onClose={() => setShowClienteModal(false)}
+        onSelectCustomer={(c) => {
+          setSelectedCustomer(c)
+          setCustomerPhone(c.phone ?? "")
+          setShowClienteModal(false)
+        }}
+      />
+
+      <VentasDescuentoModal
+        open={showDescuentoModal}
+        onClose={() => setShowDescuentoModal(false)}
+        onApply={(amount, comment) => {
+          setManualDiscountAmount(amount)
+          setManualDiscountComment(comment)
+          setShowDescuentoModal(false)
+        }}
+        currentAmount={manualDiscountAmount}
+        currentComment={manualDiscountComment}
+      />
+
+      <VentasProductoManualModal
+        open={showProductoManualModal}
+        onClose={() => setShowProductoManualModal(false)}
+        onAdd={addManualProduct}
+      />
 
       <VentasCheckoutModal
         open={showModal}

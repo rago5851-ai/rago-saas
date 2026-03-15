@@ -83,7 +83,7 @@ export function VentasCartPanel({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 6 }}
                   className={`flex items-center gap-3 py-2.5 px-3 rounded-xl border transition-all ${
-                    i.qty > i.product.stockLiters
+                    !i.product.id.startsWith("manual-") && i.qty > i.product.stockLiters
                       ? "bg-red-50/80 border-red-200"
                       : "bg-slate-50/80 border-slate-100"
                   }`}
@@ -107,7 +107,7 @@ export function VentasCartPanel({
                     <button
                       type="button"
                       onClick={() => onUpdateQty(i.product.id, 1)}
-                      disabled={i.qty >= i.product.stockLiters}
+                      disabled={!i.product.id.startsWith("manual-") && i.qty >= i.product.stockLiters}
                       className="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center text-white hover:bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 transition-colors"
                       aria-label="Aumentar cantidad"
                     >

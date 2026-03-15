@@ -19,6 +19,9 @@ export async function loginWithGoogleAction(idToken: string) {
     console.error("[AUTH] Firebase Auth no disponible en loginWithGoogleAction")
     return { success: false, error: "El servicio de autenticación no está disponible." }
   }
+  if (!db) {
+    return { success: false, error: "Servicio no disponible." }
+  }
 
   try {
     const decodedToken = await auth.verifyIdToken(idToken)
@@ -54,8 +57,9 @@ export async function loginWithGoogleAction(idToken: string) {
     })
 
     return { success: true }
-  } catch (error) {
-    console.error("[AUTH] loginWithGoogleAction error:", error)
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error("[AUTH] loginWithGoogleAction error:", msg)
     return { success: false, error: "No se pudo verificar la sesión de Google. Intenta de nuevo." }
   }
 }
@@ -118,6 +122,7 @@ export async function loginAction(formData: FormData) {
     const uid = data.localId
 
     // 2. Obtener datos del usuario desde Firestore
+    if (!db) return { success: false, error: "Servicio no disponible." }
     const userDoc = await db.collection("users").doc(uid).get()
     
     let role = "CUSTOMER"
@@ -207,6 +212,7 @@ export async function registerAction(formData: FormData) {
     const uid = newUser.uid
 
     // 2. Crear documento del usuario en Firestore
+    if (!db) return { success: false, error: "Servicio no disponible." }
     const role = "CUSTOMER"
     await db.collection("users").doc(uid).set({
       email,

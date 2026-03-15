@@ -13,6 +13,7 @@ export async function getCashRegisterState(dateFilter?: string) {
       console.error("[AUDIT] getCashRegisterState: No userId found");
       return { success: false, error: "No autorizado" }
     }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     // 1. Encontrar el corte de caja más reciente (Sin orderBy para evitar índice)
     const cutsSnap = await db.collection("cashCuts")
@@ -30,7 +31,9 @@ export async function getCashRegisterState(dateFilter?: string) {
       const lastCut: any = sortedCuts[0]
       sessionStart = lastCut.createdAt?.toDate() || null
       retainedCash = lastCut.cashRetained || 0
-      console.log("[AUDIT] getCashRegisterState: Found last cut", { sessionStart, retainedCash });
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[AUDIT] getCashRegisterState: Found last cut", { sessionStart, retainedCash });
+      }
     }
 
     // 2. Traer TODAS las ventas del usuario y filtrar en JS
@@ -46,9 +49,13 @@ export async function getCashRegisterState(dateFilter?: string) {
     let effectiveStart = start;
     if (sessionStart && sessionStart > start) {
       effectiveStart = sessionStart;
-      console.log("[AUDIT] Caja: Usando corte reciente como inicio", { sessionStart });
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[AUDIT] Caja: Usando corte reciente como inicio", { sessionStart });
+      }
     } else {
-      console.log("[AUDIT] Caja: Usando inicio de día (Hoy) como inicio", { start });
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[AUDIT] Caja: Usando inicio de día (Hoy) como inicio", { start });
+      }
     }
 
     const filteredDocs = salesSnap.docs.filter(doc => {
@@ -58,13 +65,15 @@ export async function getCashRegisterState(dateFilter?: string) {
       return createdAt >= effectiveStart && createdAt <= end
     })
 
-    console.log("[AUDIT] getCashRegisterState JS results", { 
-      userId, 
-      totalUserDocs: salesSnap.size,
-      foundFiltered: filteredDocs.length,
-      range: { start: effectiveStart, end },
-      dateStr
-    });
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[AUDIT] getCashRegisterState JS results", {
+        userId,
+        totalUserDocs: salesSnap.size,
+        foundFiltered: filteredDocs.length,
+        range: { start: effectiveStart, end },
+        dateStr,
+      });
+    }
 
     let efectivo = retainedCash
     let tarjeta = 0
@@ -108,6 +117,7 @@ export async function processCashCut(
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const difference = manualCount - expectedEfectivo
     // Lo que queda en caja es lo contado menos lo retirado
@@ -123,13 +133,15 @@ export async function processCashCut(
       createdAt: new Date(),
     })
 
-    console.log("[AUDIT] processCashCut SUCCESS", { 
-      userId, 
-      expectedEfectivo, 
-      manualCount, 
-      withdrawAmount, 
-      cashRetained 
-    });
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[AUDIT] processCashCut SUCCESS", {
+        userId,
+        expectedEfectivo,
+        manualCount,
+        withdrawAmount,
+        cashRetained,
+      });
+    }
 
     revalidatePath("/caja")
     revalidatePath("/")

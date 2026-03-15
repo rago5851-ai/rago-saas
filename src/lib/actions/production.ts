@@ -10,6 +10,7 @@ export async function getWorkOrders() {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     // 1. Obtener órdenes del usuario (sin orderBy para evitar índice compuesto)
     const ordersSnapshot = await db.collection("workOrders")
@@ -68,6 +69,7 @@ export async function createWorkOrder(formulaId: string, targetVolumeLiters: num
 
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const orderData = {
       userId: userId,
@@ -101,6 +103,7 @@ export async function completeWorkOrder(orderId: string, observations: string = 
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     // 1. Obtener la orden
     const orderDoc = await db.collection("workOrders").doc(orderId).get()
@@ -272,6 +275,7 @@ export async function deleteWorkOrder(id: string) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const doc = await db.collection("workOrders").doc(id).get()
     if (!doc.exists || doc.data()?.userId !== userId) {

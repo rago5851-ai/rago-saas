@@ -10,6 +10,7 @@ export async function getFormulas() {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     // 1. Obtener formulas del usuario (sin orderBy para evitar índice compuesto)
     const formulasSnapshot = await db.collection("formulas")
@@ -73,6 +74,7 @@ export async function createFormula(
 
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const formulaData = {
       userId: userId,
@@ -111,6 +113,7 @@ export async function deleteFormula(formulaId: string) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const docRef = db.collection("formulas").doc(formulaId)
     const doc = await docRef.get()
@@ -139,6 +142,7 @@ export async function updateFormula(
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const docRef = db.collection("formulas").doc(formulaId)
     const doc = await docRef.get()
@@ -173,6 +177,7 @@ export async function getFormulaById(formulaId: string) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const docRef = db.collection("formulas").doc(formulaId)
     const doc = await docRef.get()

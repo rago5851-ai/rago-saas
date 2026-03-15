@@ -22,6 +22,8 @@ type SuccessData = {
   pointsRedeemed?: number
   discountAmount?: number
   pointsEarned?: number
+  manualDiscount?: number
+  saleComment?: string
   items?: CartItem[]
   customerName?: string
   customerPhone?: string
@@ -85,18 +87,18 @@ export function VentasCheckoutModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       >
         <motion.div
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          exit={{ y: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[88vh]"
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.96 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          className="w-full max-w-lg bg-white rounded-3xl shadow-2xl flex flex-col max-h-[85vh]"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="overflow-y-auto flex-1">
+          <div className="overflow-y-auto flex-1 min-h-0 pb-8">
             {step !== "SUCCESS" && (
               <>
                 <div className="bg-[var(--primary)] px-6 pt-6 pb-8 relative">
@@ -104,10 +106,10 @@ export function VentasCheckoutModal({
                     type="button"
                     onClick={onClose}
                     disabled={checkingOut}
-                    className="absolute top-4 right-4 h-8 w-8 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+                    className="absolute top-4 right-4 h-10 w-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
                     aria-label="Cerrar"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-5 w-5" />
                   </button>
                   <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-1">
                     Registrar Venta
@@ -317,10 +319,10 @@ export function VentasCheckoutModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="absolute top-4 right-4 h-8 w-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
+                  className="absolute top-4 right-4 h-10 w-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
                   aria-label="Cerrar"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
                 </button>
                 <div className="h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center mb-5">
                   <CheckCircle2 className="h-10 w-10 text-emerald-500" />
@@ -329,27 +331,38 @@ export function VentasCheckoutModal({
                 <p className="text-gray-500 text-sm mb-6">Venta registrada correctamente</p>
 
                 <div className="w-full bg-gray-50 rounded-2xl p-5 space-y-3 text-left">
-                  {successData.totalOriginal != null &&
-                    successData.totalOriginal > successData.total && (
-                      <>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500 font-medium">Subtotal</span>
-                          <span className="font-bold text-gray-700 line-through">
-                            ${successData.totalOriginal.toFixed(2)}
-                          </span>
-                        </div>
+                  {successData.totalOriginal != null && successData.totalOriginal > successData.total && (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500 font-medium">Subtotal</span>
+                        <span className="font-bold text-gray-700 line-through">
+                          ${successData.totalOriginal.toFixed(2)}
+                        </span>
+                      </div>
+                      {successData.discountAmount != null && successData.discountAmount > 0 && (
                         <div className="flex justify-between items-center">
                           <span className="text-emerald-600 font-bold flex items-center gap-1">
                             <Star className="h-4 w-4 fill-current" /> Descuento por puntos (
                             {successData.pointsRedeemed ?? 0} pts = $
-                            {successData.discountAmount?.toFixed(2) ?? "0.00"})
+                            {successData.discountAmount.toFixed(2)})
                           </span>
                           <span className="font-bold text-emerald-600">
-                            -${successData.discountAmount?.toFixed(2) ?? "0.00"}
+                            -${successData.discountAmount.toFixed(2)}
                           </span>
                         </div>
-                      </>
-                    )}
+                      )}
+                      {successData.manualDiscount != null && successData.manualDiscount > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-amber-600 font-bold">
+                            Descuento{successData.saleComment ? ` (${successData.saleComment})` : ""}
+                          </span>
+                          <span className="font-bold text-amber-600">
+                            -${successData.manualDiscount.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
                   <div className="flex justify-between items-center border-t border-gray-200 pt-3">
                     <span className="text-gray-500 font-medium">Total cobrado</span>
                     <span className="text-2xl font-black text-gray-900">
@@ -388,18 +401,36 @@ export function VentasCheckoutModal({
                         : phone.length >= 10
                           ? `52${phone.slice(-10)}`
                           : ""
+                  const hasDiscount =
+                    successData.totalOriginal != null && successData.totalOriginal > successData.total
+                  const discountParts: string[] = []
+                  if (hasDiscount && successData.totalOriginal != null) {
+                    discountParts.push(`Subtotal: $${successData.totalOriginal.toFixed(2)}`)
+                    if (successData.discountAmount != null && successData.discountAmount > 0) {
+                      discountParts.push(
+                        `Descuento (puntos): -$${successData.discountAmount.toFixed(2)}`
+                      )
+                    }
+                    if (successData.manualDiscount != null && successData.manualDiscount > 0) {
+                      const label = successData.saleComment
+                        ? `Descuento (${successData.saleComment}): -$${successData.manualDiscount.toFixed(2)}`
+                        : `Descuento: -$${successData.manualDiscount.toFixed(2)}`
+                      discountParts.push(label)
+                    }
+                  }
                   const ticketLines = [
                     "🏪 *RAGO - Ticket de Venta*",
-                    "",
+                    ...(successData.customerName?.trim()
+                      ? [`👤 Cliente: ${successData.customerName.trim()}`, ""]
+                      : []),
                     "📦 *Productos:*",
                     ...(successData.items ?? []).map(
                       (i: CartItem) =>
                         `• ${i.name}: ${i.quantity} × $${i.pricePerLiter.toFixed(2)} = $${(i.quantity * i.pricePerLiter).toFixed(2)}`
                     ),
                     "",
-                    successData.totalOriginal != null && successData.totalOriginal > successData.total
-                      ? `Subtotal: $${successData.totalOriginal.toFixed(2)}\nDescuento (puntos): -$${successData.discountAmount?.toFixed(2) ?? "0.00"}`
-                      : "",
+                    ...discountParts,
+                    discountParts.length > 0 ? "" : "",
                     `*Total: $${successData.total.toFixed(2)}*`,
                     "",
                     `💵 Método: ${method}`,

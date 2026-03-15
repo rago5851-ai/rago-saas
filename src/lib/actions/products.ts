@@ -19,6 +19,7 @@ export async function getProducts() {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const snapshot = await db.collection("productInventory")
       .where("userId", "==", userId)
@@ -79,6 +80,7 @@ export async function updateProduct(id: string, data: Partial<ProductInput>) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const doc = await db.collection("productInventory").doc(id).get()
     if (!doc.exists || (doc.data() as any)?.userId !== userId) {
@@ -114,6 +116,7 @@ export async function deleteProduct(id: string) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const doc = await db.collection("productInventory").doc(id).get()
     if (!doc.exists || (doc.data() as any)?.userId !== userId) {
@@ -135,6 +138,7 @@ export async function surtirProducto(productId: string, quantity: number) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const docRef = db.collection("productInventory").doc(productId)
     const doc = await docRef.get()

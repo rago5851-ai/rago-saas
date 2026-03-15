@@ -14,6 +14,7 @@ export async function getSalesReport(range: string, customStart?: string, custom
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     let startDate: Date
     let endDate = new Date()
@@ -79,6 +80,7 @@ export async function getTopProducts(range: string, customStart?: string, custom
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     let startDate: Date
     let endDate = new Date()
@@ -150,6 +152,7 @@ export async function getCashCutsHistory() {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     // Obtenemos los cortes del usuario
     const snapshot = await db.collection("cashCuts")
@@ -221,6 +224,7 @@ export async function getVentasDelMes(yearMonth: string) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const [y, m] = yearMonth.split("-").map(Number)
     if (!y || !m) return { success: false, error: "Formato de mes inválido (YYYY-MM)" }
@@ -287,6 +291,7 @@ export async function getTotalMateriaPrimaMes(yearMonth: string) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const [y, m] = yearMonth.split("-").map(Number)
     if (!y || !m) return { success: false, error: "Formato de mes inválido (YYYY-MM)" }
@@ -362,6 +367,7 @@ export async function saveUtilidadesMes(yearMonth: string, data: UtilidadesGasto
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const docId = `${userId}_${yearMonth}`
     const payload = {

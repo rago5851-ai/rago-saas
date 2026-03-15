@@ -9,6 +9,7 @@ export async function getRawMaterials() {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const snapshot = await db.collection("rawMaterials")
                              .where("userId", "==", userId)
@@ -29,6 +30,7 @@ export async function createRawMaterial(formData: FormData) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const roundTo3 = (num: number) => Math.round(num * 1000) / 1000;
 
@@ -70,6 +72,7 @@ export async function updateRawMaterialStock(id: string, newStock: number) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     // Check ownership before updating
     const doc = await db.collection("rawMaterials").doc(id).get()
@@ -92,6 +95,7 @@ export async function addRawMaterialStock(rawMaterialId: string, quantityToAdd: 
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const docRef = db.collection("rawMaterials").doc(rawMaterialId)
     const doc = await docRef.get()
@@ -134,6 +138,7 @@ export async function deleteRawMaterial(id: string) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const doc = await db.collection("rawMaterials").doc(id).get()
     if (!doc.exists || doc.data()?.userId !== userId) {
@@ -152,6 +157,7 @@ export async function updateRawMaterialFromForm(formData: FormData) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const id = formData.get("id") as string;
     const roundTo3 = (num: number) => Math.round(num * 1000) / 1000;

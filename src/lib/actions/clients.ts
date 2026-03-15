@@ -9,6 +9,7 @@ export async function getClients(search: string = "") {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     let query = db.collection("customers").where("userId", "==", userId)
     
@@ -37,6 +38,7 @@ export async function createClient(name: string, phone: string) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const newClient = {
       userId,
@@ -69,6 +71,7 @@ export async function getClientByPhone(phone: string) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const snapshot = await db.collection("customers")
       .where("userId", "==", userId)

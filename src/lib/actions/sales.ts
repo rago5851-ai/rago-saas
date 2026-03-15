@@ -7,10 +7,15 @@ import { revalidatePath } from "next/cache"
 import { getUserId } from "@/lib/auth-utils"
 import { getMeridaDayRange, getMeridaTodayStr } from "@/lib/date-utils"
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
+
 export async function getProductInventory() {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const snapshot = await db.collection("productInventory")
       .where("userId", "==", userId)
@@ -21,13 +26,20 @@ export async function getProductInventory() {
       .sort((a: any, b: any) => (a.name ?? "").localeCompare(b.name ?? ""))
 
     return sanitizeResponse({ success: true, data: items })
-  } catch (error: any) {
-    console.error("Error fetching product inventory:", error?.message || error)
+  } catch (error: unknown) {
+    console.error("Error fetching product inventory:", errorMessage(error))
     return { success: false, error: "No se pudo cargar el catálogo" }
   }
 }
 
-export type CartItem = { productId: string; name: string; quantity: number; pricePerLiter: number }
+export type CartItem = {
+  productId: string
+  name: string
+  quantity: number
+  pricePerLiter: number
+  /** When true, item is not in inventory (e.g. manual product); no stock check/update */
+  manual?: boolean
+}
 export type PaymentMethod = "EFECTIVO" | "TARJETA" | "TRANSFERENCIA"
 
 export type LoyaltyConfig = {
@@ -44,6 +56,7 @@ export async function getLoyaltyConfig() {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const docRef = db.collection("configuracion").doc(`${userId}_lealtad`)
     const doc = await docRef.get()
@@ -96,15 +109,18 @@ export async function updateLoyaltyConfig(config: LoyaltyConfig) {
 }
 
 export async function processCheckout(
-  cart: CartItem[], 
-  paymentMethod: PaymentMethod = "EFECTIVO", 
+  cart: CartItem[],
+  paymentMethod: PaymentMethod = "EFECTIVO",
   amountPaid: number = 0,
   clientId?: string,
-  redeemPoints: boolean = false
+  redeemPoints: boolean = false,
+  manualDiscount: number = 0,
+  saleComment: string = ""
 ) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
     if (!cart || cart.length === 0) return { success: false, error: "El carrito está vacío" }
 
     const totalOriginal = cart.reduce((s, i) => s + i.quantity * i.pricePerLiter, 0)
@@ -112,38 +128,45 @@ export async function processCheckout(
     let pointsToRedeem = 0
     let pointsEarned = 0
 
+    const inventoryItems = cart.filter((i) => !i.manual)
+    const manualItems = cart.filter((i) => i.manual)
+
     const configDoc = await getLoyaltyConfig()
-    const config = configDoc.success ? configDoc.data as LoyaltyConfig : DEFAULT_LOYALTY_CONFIG
+    const config = configDoc.success ? (configDoc.data as LoyaltyConfig) : DEFAULT_LOYALTY_CONFIG
 
     await db.runTransaction(async (transaction: any) => {
-      // 1. Validar Stock
-      const refs = cart.map(item => db.collection("productInventory").doc(item.productId))
-      const snaps = await Promise.all(refs.map(ref => transaction.get(ref)))
-
+      // 1. Validar y preparar actualización de stock solo para ítems de inventario
       const updates: { ref: any; newStock: number }[] = []
-      for (let i = 0; i < cart.length; i++) {
-        const item = cart[i]
-        const snap = snaps[i]
-        if (!snap.exists) throw new Error(`Producto no encontrado: ${item.name}`)
-        const current = snap.data()
-        const newStock = (current?.stockLiters || 0) - item.quantity
-        if (newStock < 0) {
-          throw new Error(`Stock insuficiente para: ${item.name} (disponible: ${(current?.stockLiters || 0).toFixed(1)} L)`)
+      if (inventoryItems.length > 0) {
+        const refs = inventoryItems.map((item) =>
+          db.collection("productInventory").doc(item.productId)
+        )
+        const snaps = await Promise.all(refs.map((ref) => transaction.get(ref)))
+        for (let i = 0; i < inventoryItems.length; i++) {
+          const item = inventoryItems[i]
+          const snap = snaps[i]
+          if (!snap.exists) throw new Error(`Producto no encontrado: ${item.name}`)
+          const current = snap.data()
+          const newStock = (current?.stockLiters || 0) - item.quantity
+          if (newStock < 0) {
+            throw new Error(
+              `Stock insuficiente para: ${item.name} (disponible: ${(current?.stockLiters || 0).toFixed(1)} L)`
+            )
+          }
+          updates.push({ ref: refs[i], newStock })
         }
-        updates.push({ ref: refs[i], newStock })
       }
 
       // 2. Manejar Puntos si hay cliente
       let clientRef = null
-      let clientData = null
+      let clientData: Record<string, unknown> | null = null
       if (clientId) {
         clientRef = db.collection("customers").doc(clientId)
         const clientSnap = await transaction.get(clientRef)
         if (clientSnap.exists) {
-          clientData = clientSnap.data()
-          
+          clientData = clientSnap.data() as Record<string, unknown>
           if (redeemPoints) {
-            pointsToRedeem = clientData.points || 0
+            pointsToRedeem = (clientData.points as number) || 0
             const discount = pointsToRedeem * config.pointValue
             total = Math.max(0, total - discount)
             transaction.update(clientRef, { points: 0, updatedAt: new Date() })
@@ -151,34 +174,43 @@ export async function processCheckout(
         }
       }
 
-      // 3. Aplicar Stock
+      // 3. Aplicar descuento manual
+      const manualDiscountRounded = Math.round(Math.max(0, manualDiscount) * 100) / 100
+      total = Math.max(0, total - manualDiscountRounded)
+
+      // 4. Aplicar Stock (solo inventario)
       for (const { ref, newStock } of updates) {
         transaction.update(ref, { stockLiters: newStock, updatedAt: new Date() })
       }
 
-      // 4. Calcular Puntos Ganados (sobre el total final descontado)
+      // 5. Calcular Puntos Ganados (sobre el total final descontado)
       pointsEarned = Math.floor(total / config.pointsPerSaleAmount)
       if (clientRef && clientData) {
-        const currentPoints = redeemPoints ? 0 : (clientData.points || 0)
-        transaction.update(clientRef, { 
-          points: currentPoints + pointsEarned, 
-          updatedAt: new Date() 
+        const currentPoints = redeemPoints ? 0 : ((clientData.points as number) || 0)
+        transaction.update(clientRef, {
+          points: currentPoints + pointsEarned,
+          updatedAt: new Date(),
         })
       }
 
-      // 5. Registrar Venta
+      // 6. Registrar Venta
       const saleRef = db.collection("salesHistory").doc()
       transaction.set(saleRef, {
-        userId: userId,
+        userId,
         customerId: clientId || null,
         items: cart,
         totalOriginal: Math.round(totalOriginal * 100) / 100,
         total: Math.round(total * 100) / 100,
         pointsRedeemed: pointsToRedeem,
         pointsEarned: pointsEarned,
+        manualDiscount: manualDiscountRounded,
+        saleComment: saleComment || null,
         paymentMethod,
         amountPaid: Math.round(amountPaid * 100) / 100,
-        change: paymentMethod === "EFECTIVO" ? Math.round((amountPaid - total) * 100) / 100 : 0,
+        change:
+          paymentMethod === "EFECTIVO"
+            ? Math.round((amountPaid - total) * 100) / 100
+            : 0,
         createdAt: new Date(),
       })
     })
@@ -210,6 +242,7 @@ export async function getSalesHistory(dateFilter?: string) {
   try {
     const userId = await getUserId()
     if (!userId) return { success: false, error: "No autorizado" }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     let query = db.collection("salesHistory").where("userId", "==", userId)
 
@@ -219,15 +252,16 @@ export async function getSalesHistory(dateFilter?: string) {
     }
 
     const snap = await query.orderBy("createdAt", "desc").get()
-    console.log("[AUDIT] getSalesHistory", { userId, dateFilter, count: snap.size });
-
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[AUDIT] getSalesHistory", { userId, dateFilter, count: snap.size })
+    }
     const sales = snap.docs.map((doc) =>
       serializeDoc({ id: doc.id, ...(doc.data() as Record<string, unknown>) })
     )
 
     return sanitizeResponse({ success: true, data: sales })
-  } catch (error: any) {
-    console.error("Error fetching sales history [FULL ERROR]:", error);
+  } catch (error: unknown) {
+    console.error("Error fetching sales history [FULL ERROR]:", errorMessage(error))
     return { success: false, error: "No se pudo cargar el historial. Revisa los logs para errores de índices." }
   }
 }
@@ -239,6 +273,7 @@ export async function getDashboardStats(dateFilter?: string) {
       console.error("[AUDIT] getDashboardStats: No userId found");
       return { success: false, error: "No autorizado" }
     }
+    if (!db) return { success: false, error: "Servicio no disponible" }
 
     const query = db.collection("salesHistory").where("userId", "==", userId)
     const snap = await query.get()
@@ -253,12 +288,14 @@ export async function getDashboardStats(dateFilter?: string) {
       return createdAt >= start && createdAt <= end;
     }).map(doc => doc.data());
 
-    console.log("[AUDIT] getDashboardStats JS results", { 
-      userId, 
-      dateFilter: dateStr, 
-      totalUserDocs: snap.size,
-      foundToday: todaySales.length
-    });
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[AUDIT] getDashboardStats JS results", {
+        userId,
+        dateFilter: dateStr,
+        totalUserDocs: snap.size,
+        foundToday: todaySales.length,
+      })
+    }
     const todayTotal = todaySales.reduce((sum: number, s: any) => sum + (s.total || 0), 0)
     const todayCount = todaySales.length
 
@@ -266,8 +303,8 @@ export async function getDashboardStats(dateFilter?: string) {
       success: true,
       data: { todayTotal: Math.round(todayTotal * 100) / 100, todayCount },
     })
-  } catch (error: any) {
-    console.error("Error fetching dashboard stats [FULL ERROR]:", error)
+  } catch (error: unknown) {
+    console.error("Error fetching dashboard stats [FULL ERROR]:", errorMessage(error))
     return { success: false, error: "Error al cargar estadísticas" }
   }
 }
