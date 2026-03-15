@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { MobileNav } from "@/components/layout/mobile-nav";
+import { AppShell } from "@/components/layout/app-shell";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,11 +17,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${inter.className} bg-gray-50 min-h-screen pb-16`}>
-        <main className="mx-auto max-w-md bg-white min-h-screen shadow-sm">
-          {children}
-        </main>
-        <MobileNav />
+      <body className={`${inter.className} bg-gray-50 min-h-screen pb-16 lg:pb-0`}>
+        <AppShell>
+          <main className="mx-auto max-w-md lg:max-w-none bg-white lg:bg-slate-50/50 min-h-screen shadow-sm lg:shadow-none">
+            {children}
+          </main>
+        </AppShell>
       </body>
     </html>
   );

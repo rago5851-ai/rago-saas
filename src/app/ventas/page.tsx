@@ -1,21 +1,28 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { getProductInventory, processCheckout, CartItem, PaymentMethod, getLoyaltyConfig, updateLoyaltyConfig, LoyaltyConfig } from "@/lib/actions/sales"
-import { getClientByPhone } from "@/lib/actions/clients"
 import {
-  Search, Plus, Minus, ShoppingCart, Package2, X,
-  CheckCircle2, CreditCard, ArrowRightLeft, Banknote, ChevronRight, Trash2, 
-  Phone, UserPlus, Star, Settings, Check, Send
-} from "lucide-react"
-import Link from "next/link"
+  getProductInventory,
+  processCheckout,
+  CartItem,
+  PaymentMethod,
+  getLoyaltyConfig,
+  LoyaltyConfig,
+} from "@/lib/actions/sales"
+import { getClientByPhone } from "@/lib/actions/clients"
+import { Search, ShoppingCart } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
 import { motion, AnimatePresence } from "framer-motion"
+import {
+  VentasSearchArea,
+  VentasLoyaltyCard,
+  VentasCartPanel,
+  VentasCheckoutModal,
+  type Product,
+  type Cart,
+} from "@/components/ventas"
 
-type Product = { id: string; name: string; stockLiters: number; salePrice: number; costPerLiter: number }
-type Cart = Record<string, { product: Product; qty: number }>
 type ModalStep = "METHODS" | "CASH_INPUT" | "SUCCESS"
 
 export default function VentasPage() {
@@ -24,7 +31,6 @@ export default function VentasPage() {
   const [search, setSearch] = useState("")
   const [cart, setCart] = useState<Cart>({})
 
-  // Modal state
   const [showModal, setShowModal] = useState(false)
   const [step, setStep] = useState<ModalStep>("METHODS")
   const [method, setMethod] = useState<PaymentMethod>("EFECTIVO")
@@ -42,17 +48,21 @@ export default function VentasPage() {
     customerPhone?: string
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  
-  // Loyalty state
+
   const [customerPhone, setCustomerPhone] = useState("")
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<{
+    id?: string
+    name?: string
+    phone?: string
+    points?: number
+  } | null>(null)
   const [searchingCustomer, setSearchingCustomer] = useState(false)
   const [redeemPoints, setRedeemPoints] = useState(false)
   const [loyaltyConfig, setLoyaltyConfig] = useState<LoyaltyConfig | null>(null)
 
   const loadProducts = () => {
     setLoading(true)
-    getProductInventory().then(res => {
+    getProductInventory().then((res) => {
       if (res.success && res.data) setProducts(res.data as Product[])
       setTimeout(() => setLoading(false), 300)
     })
@@ -61,19 +71,21 @@ export default function VentasPage() {
   const DEFAULT_LOYALTY = { pointsPerSaleAmount: 100, pointValue: 1 }
 
   const loadConfig = () => {
-    getLoyaltyConfig().then(res => {
-      if (res.success && res.data) {
-        setLoyaltyConfig({
-          pointsPerSaleAmount: Number(res.data.pointsPerSaleAmount) || 100,
-          pointValue: Number(res.data.pointValue) || 1,
-        } as LoyaltyConfig)
-      } else {
-        setLoyaltyConfig(DEFAULT_LOYALTY as LoyaltyConfig)
-      }
-    }).catch(() => setLoyaltyConfig(DEFAULT_LOYALTY as LoyaltyConfig))
+    getLoyaltyConfig()
+      .then((res) => {
+        if (res.success && res.data) {
+          setLoyaltyConfig({
+            pointsPerSaleAmount: Number(res.data.pointsPerSaleAmount) || 100,
+            pointValue: Number(res.data.pointValue) || 1,
+          } as LoyaltyConfig)
+        } else {
+          setLoyaltyConfig(DEFAULT_LOYALTY as LoyaltyConfig)
+        }
+      })
+      .catch(() => setLoyaltyConfig(DEFAULT_LOYALTY as LoyaltyConfig))
   }
 
-  useEffect(() => { 
+  useEffect(() => {
     loadProducts()
     loadConfig()
   }, [])
@@ -83,9 +95,10 @@ export default function VentasPage() {
       if (customerPhone.length >= 10) {
         setSearchingCustomer(true)
         const res = await getClientByPhone(customerPhone)
-        if (res.success) {
-          setSelectedCustomer(res.data)
-        }
+        if (res.success)
+        setSelectedCustomer(
+          (res.data ?? null) as { id?: string; name?: string; phone?: string; points?: number } | null
+        )
         setSearchingCustomer(false)
       } else {
         setSelectedCustomer(null)
@@ -100,27 +113,23 @@ export default function VentasPage() {
   const filtered = useMemo(() => {
     const q = normalize(search.trim())
     if (!q) return []
-    return products.filter(p => normalize(p.name).includes(q) && p.stockLiters > 0)
+    return products.filter((p) => {
+      const matchName = normalize(p.name ?? "").includes(q)
+      const matchBarcode = (p.barcode ?? "").toString().includes(q.trim())
+      return (matchName || matchBarcode) && p.stockLiters > 0
+    })
   }, [products, search])
 
   const addToCart = (p: Product) => {
-    setCart(prev => {
+    setCart((prev) => {
       const qty = prev[p.id]?.qty || 0
       if (qty >= p.stockLiters) return prev
       return { ...prev, [p.id]: { product: p, qty: qty + 1 } }
     })
   }
 
-  const removeFromCart = (id: string) => {
-    setCart(prev => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    })
-  }
-
   const updateQty = (id: string, delta: number) => {
-    setCart(prev => {
+    setCart((prev) => {
       const item = prev[id]
       if (!item) return prev
       const newQty = item.qty + delta
@@ -133,31 +142,40 @@ export default function VentasPage() {
     })
   }
 
-  const cartItems = Object.values(cart).filter(i => i.qty > 0)
+  const cartItems = Object.values(cart).filter((i) => i.qty > 0)
   const total = cartItems.reduce((s, i) => s + i.qty * i.product.salePrice, 0)
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0)
-  const hasIncompleteStock = cartItems.some(i => i.qty > i.product.stockLiters)
+  const hasIncompleteStock = cartItems.some((i) => i.qty > i.product.stockLiters)
 
-  const totalPotentialDiscount = selectedCustomer && loyaltyConfig 
-    ? (selectedCustomer.points || 0) * loyaltyConfig.pointValue 
-    : 0
-
+  const totalPotentialDiscount =
+    selectedCustomer && loyaltyConfig
+      ? (selectedCustomer.points ?? 0) * loyaltyConfig.pointValue
+      : 0
   const totalDiscount = redeemPoints ? totalPotentialDiscount : 0
   const totalFinal = Math.max(0, total - totalDiscount)
-  const pointsToEarn = Math.floor(totalFinal / (loyaltyConfig?.pointsPerSaleAmount || 100))
+  const pointsToEarn = Math.floor(
+    totalFinal / (loyaltyConfig?.pointsPerSaleAmount ?? 100)
+  )
 
   const cashPaid = parseFloat(cashInput) || 0
   const change = cashPaid - totalFinal
 
-  const openModal = () => { 
-    loadConfig() // Asegurar configuración fresca al abrir cobro
+  const openModal = () => {
+    loadConfig()
     setStep("METHODS")
     setMethod("EFECTIVO")
     setCashInput("")
     setError(null)
     setShowModal(true)
   }
-  const closeModal = () => { if (!checkingOut) { setShowModal(false); setSuccessData(null); setCart({}) } }
+
+  const closeModal = () => {
+    if (!checkingOut) {
+      setShowModal(false)
+      setSuccessData(null)
+      setCart({})
+    }
+  }
 
   const handleConfirmPayment = async () => {
     if (method === "EFECTIVO" && cashPaid < totalFinal) {
@@ -166,15 +184,15 @@ export default function VentasPage() {
     }
     setCheckingOut(true)
     setError(null)
-    const payload: CartItem[] = cartItems.map(i => ({
+    const payload: CartItem[] = cartItems.map((i) => ({
       productId: i.product.id,
       name: i.product.name,
       quantity: i.qty,
       pricePerLiter: i.product.salePrice,
     }))
     const result = await processCheckout(
-      payload, 
-      method, 
+      payload,
+      method,
       method === "EFECTIVO" ? cashPaid : totalFinal,
       selectedCustomer?.id,
       redeemPoints
@@ -189,496 +207,218 @@ export default function VentasPage() {
         pointsEarned: result.pointsEarned,
         items: payload,
         customerName: selectedCustomer?.name,
-        customerPhone: selectedCustomer?.phone || customerPhone,
+        customerPhone: selectedCustomer?.phone ?? customerPhone,
       })
       setStep("SUCCESS")
       setCart({})
       loadProducts()
     } else {
-      setError(result.error || "Error al cobrar")
+      setError(result.error ?? "Error al cobrar")
     }
     setCheckingOut(false)
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-blue-600 px-4 pt-6 pb-4 shadow-lg">
-        <div className="flex items-center justify-between mb-3">
-          <motion.div
-            initial={{ x: -10, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-          >
-            <h1 className="text-xl font-black text-white tracking-tight">Punto de Venta</h1>
-            <p className="text-indigo-200 text-[10px] font-bold uppercase tracking-widest">Atención a Clientes</p>
-          </motion.div>
-          {cartCount > 0 && (
-            <motion.div 
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="relative"
-            >
-              <ShoppingCart className="h-7 w-7 text-white" />
-              <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-indigo-900 text-[10px] font-black rounded-full h-4 w-4 flex items-center justify-center">{cartCount}</span>
+    <div className="flex flex-col lg:flex-row lg:min-h-screen bg-slate-50/80">
+      {/* Header unificado: móvil + escritorio con gradiente y búsqueda */}
+      <header className="lg:border-b border-slate-200/80 bg-gradient-to-b from-white to-slate-50/50 px-4 py-4 lg:px-8 lg:py-5 shadow-sm sticky top-0 z-10 backdrop-blur-sm bg-white/95 lg:bg-gradient-to-b lg:from-white lg:to-slate-50/50">
+        <div className="max-w-6xl mx-auto flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
+          <div className="flex items-center justify-between lg:shrink-0">
+            <motion.div initial={{ x: -10, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
+              <h1 className="text-xl lg:text-2xl font-bold text-slate-800 tracking-tight">
+                Punto de venta
+              </h1>
+              <p className="text-slate-500 text-xs mt-0.5">
+                Busca el producto y agrega al carrito
+              </p>
             </motion.div>
-          )}
-        </div>
-        <div className="relative px-2">
-          <Input type="search" placeholder="Buscar producto (ej. Cloro)..." value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full h-12 pl-11 rounded-2xl border-0 bg-white shadow-lg text-gray-900 placeholder:text-gray-400 font-bold" />
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
-        </div>
-      </header>
-
-      <main className="flex-1 p-5 pb-[120px] space-y-6">
-        {/* BUSCADOR DE CLIENTE / LEALTAD */}
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="bg-indigo-50 px-4 py-2 border-b border-indigo-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Star className="h-4 w-4 text-indigo-600 fill-indigo-600" />
-              <p className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Lealtad Rago</p>
-            </div>
-            {selectedCustomer && (
-              <span className="text-[10px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase">
-                Puntos: {selectedCustomer.points || 0}
-              </span>
+            {cartCount > 0 && (
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="relative lg:hidden"
+              >
+                <ShoppingCart className="h-7 w-7 text-slate-600" />
+                <span className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
+                  {cartCount}
+                </span>
+              </motion.div>
             )}
           </div>
-          <div className="p-4 space-y-3">
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input 
-                type="tel" 
-                placeholder="Teléfono del Cliente..." 
-                value={customerPhone}
-                onChange={e => setCustomerPhone(e.target.value)}
-                className="pl-9 h-11 rounded-xl border-gray-100 text-sm font-bold placeholder:font-normal"
-              />
-              {searchingCustomer && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                   <div className="animate-spin h-4 w-4 border-2 border-indigo-600 border-t-transparent rounded-full" />
-                </div>
-              )}
-            </div>
-
+          <div className="relative flex-1 max-w-2xl focus-within:ring-2 focus-within:ring-[var(--primary)]/20 focus-within:rounded-2xl transition-shadow">
+            <Search className="absolute left-4 lg:left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
+            <Input
+              type="search"
+              placeholder="Buscar producto (ej. Cloro, Jabón)..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-12 pl-11 lg:pl-12 pr-4 rounded-xl lg:rounded-2xl border border-slate-200/80 bg-white text-slate-900 placeholder:text-slate-400 font-medium focus-visible:ring-2 focus-visible:ring-[var(--primary)]/40 focus-visible:border-blue-400 shadow-sm transition-all"
+              aria-label="Buscar producto"
+            />
+          </div>
+          <div className="hidden lg:block shrink-0">
             <AnimatePresence mode="wait">
-              {selectedCustomer ? (
+              {cartCount > 0 ? (
                 <motion.div
-                  initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 5 }}
-                  className="flex items-center justify-between bg-emerald-50 p-3 rounded-xl border border-emerald-100"
+                  key="with-items"
+                  initial={{ scale: 0.95, opacity: 0.8 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0.8 }}
+                  className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-[var(--primary)] text-white shadow-lg shadow-blue-500/25"
                 >
-                  <div>
-                    <p className="text-xs font-black text-emerald-800 uppercase leading-tight">{selectedCustomer.name}</p>
-                    <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Cliente Frecuente</p>
-                  </div>
-                  <X className="h-4 w-4 text-emerald-400 cursor-pointer" onClick={() => { setCustomerPhone(""); setSelectedCustomer(null); }} />
+                  <ShoppingCart className="h-5 w-5" />
+                  <span className="text-sm font-bold tabular-nums">
+                    {cartCount} en carrito
+                  </span>
                 </motion.div>
-              ) : customerPhone.length >= 10 && !searchingCustomer && (
+              ) : (
                 <motion.div
-                  initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center justify-between p-3 rounded-xl border border-dashed border-gray-200"
+                  key="empty"
+                  initial={{ opacity: 0.8 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-slate-100 text-slate-500"
                 >
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Cliente no registrado</p>
-                  <Link href="/clientes">
-                    <Button variant="ghost" className="h-7 px-3 text-[10px] font-black text-blue-600 hover:bg-blue-50 flex items-center gap-1 group">
-                      <UserPlus className="h-3 w-3" />
-                      REGISTRAR CLIENTE
-                    </Button>
-                  </Link>
+                  <ShoppingCart className="h-5 w-5" />
+                  <span className="text-sm font-medium">Carrito vacío</span>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
-        </section>
+        </div>
+      </header>
 
-        {/* RESULTADOS DE BÚSQUEDA PRODUCTO */}
-        <AnimatePresence mode="wait">
-          {search.trim() !== "" && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-2"
-            >
-              <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2 flex items-center gap-2">
-                <Search className="h-3 w-3" />
-                Sugerencias
-              </h2>
-              {loading ? (
-                <Skeleton className="h-12 w-full rounded-xl" />
-              ) : filtered.length === 0 ? (
-                <div className="p-4 bg-white rounded-2xl border border-dashed border-gray-200 text-center text-gray-400 text-xs font-bold">
-                  Sin coincidencias.
-                </div>
-              ) : (
-                filtered.map(p => (
-                  <div key={p.id} className="bg-white rounded-xl border border-gray-100 p-2.5 pl-4 flex items-center justify-between gap-3 shadow-sm transition-all active:scale-[0.98]">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-gray-900 text-sm truncate uppercase tracking-tight">{p.name}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-black text-blue-600 tracking-wider">${p.salePrice.toFixed(2)}</span>
-                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{p.stockLiters.toFixed(1)} L disp.</span>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => addToCart(p)}
-                      disabled={cart[p.id] !== undefined}
-                      className="h-8 w-8 rounded-full bg-[#2563eb] hover:bg-blue-700 shadow-md flex items-center justify-center shrink-0 disabled:bg-gray-100 disabled:text-gray-300 transition-all active:scale-90"
-                    >
-                      <Plus className="h-4 w-4 text-white" />
-                    </button>
-                  </div>
-                ))
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <main className="flex-1 p-5 pb-24 lg:pb-6 lg:pt-6 lg:px-8 lg:grid lg:grid-cols-[1fr_300px_380px] lg:gap-6 lg:items-start lg:max-w-7xl lg:mx-auto space-y-6 lg:space-y-0">
+        {/* Columna 1: Búsqueda + en móvil Lealtad y Carrito */}
+        <div className="space-y-6 lg:space-y-4">
+          <VentasSearchArea
+            search={search}
+            onSearchChange={setSearch}
+            filtered={filtered}
+            loading={loading}
+            isInCart={(id) => cart[id] != null}
+            onAddToCart={addToCart}
+          />
 
-        {/* VENTA ACTUAL (LISTA COMPACTA) */}
-        <div className="space-y-4 pt-1">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-sm font-black text-gray-900 tracking-tight flex items-center gap-2">
-              Venta Actual
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"/>
-            </h2>
-            <button 
-              onClick={() => setCart({})}
-              className="text-[9px] font-black text-red-400 uppercase tracking-[0.15em] hover:text-red-600 transition-colors"
-            >
-              Limpiar Todo
-            </button>
+          <div className="lg:hidden">
+            <VentasLoyaltyCard
+              customerPhone={customerPhone}
+              onCustomerPhoneChange={setCustomerPhone}
+              selectedCustomer={selectedCustomer}
+              onClearCustomer={() => {
+                setCustomerPhone("")
+                setSelectedCustomer(null)
+              }}
+              searchingCustomer={searchingCustomer}
+            />
           </div>
 
-          <AnimatePresence>
-            {cartItems.length === 0 ? (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl border border-dashed border-gray-200 shadow-sm"
-              >
-                <div className="h-12 w-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">
-                  <ShoppingCart className="h-5 w-5 text-gray-200" />
-                </div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest leading-loose">Tu lista está vacía</p>
-              </motion.div>
-            ) : (
-              <div className="space-y-2">
-                {cartItems.map(i => (
-                  <motion.div
-                    key={i.product.id}
-                    layout
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    className={`bg-white rounded-2xl border transition-all ${i.qty > i.product.stockLiters ? 'border-red-200 shadow-red-50' : 'border-gray-50 shadow-sm shadow-gray-200/40'}`}
-                  >
-                    <div className="px-4 py-3 flex items-center justify-between gap-4">
-                      {/* Información Izquierda */}
-                      <div className="min-w-0 flex-1 py-1">
-                        <p className="font-black text-gray-900 text-xs leading-tight uppercase break-words">
-                          {i.product.name}
-                        </p>
-                        <p className={`text-[9px] font-bold mt-1 tracking-wider uppercase ${i.qty > i.product.stockLiters ? 'text-red-500' : 'text-gray-500'}`}>
-                          ${i.product.salePrice.toFixed(2)}/L · {i.product.stockLiters.toFixed(1)}L Disp.
-                        </p>
-                      </div>
-
-                      {/* Controles Derecha (Compactos) */}
-                      <div className="flex items-center gap-4 shrink-0">
-                        <div className="flex items-center bg-gray-50 rounded-xl p-1 border border-gray-100 shadow-inner">
-                          <button 
-                            onClick={() => updateQty(i.product.id, -1)}
-                            className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all ${i.qty <= 1 ? 'bg-red-50 text-red-500 hover:bg-red-100' : 'bg-white text-gray-700 shadow-sm'}`}
-                          >
-                            {i.qty <= 1 ? <Trash2 className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
-                          </button>
-                          
-                          <span className="w-10 text-center font-black text-gray-900 text-sm tabular-nums">
-                            {i.qty.toFixed(0)}
-                          </span>
-
-                          <button 
-                            onClick={() => updateQty(i.product.id, 1)}
-                            disabled={i.qty >= i.product.stockLiters}
-                            className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-200 active:scale-95 transition-all disabled:bg-gray-200 disabled:shadow-none"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        </div>
-                        
-                        <div className="text-right min-w-[70px]">
-                          <p className="text-sm font-black text-blue-700 tabular-nums">
-                            ${(i.qty * i.product.salePrice).toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </AnimatePresence>
+          <div className="lg:hidden">
+            <VentasCartPanel
+              variant="inline"
+              cartItems={cartItems}
+              totalFinal={totalFinal}
+              hasIncompleteStock={hasIncompleteStock}
+              onUpdateQty={updateQty}
+              onClearCart={() => setCart({})}
+              onCheckout={openModal}
+            />
+          </div>
         </div>
+
+        {/* Columna 2: Lealtad — solo escritorio */}
+        <aside className="hidden lg:block lg:sticky lg:top-4 h-fit">
+          <VentasLoyaltyCard
+            customerPhone={customerPhone}
+            onCustomerPhoneChange={setCustomerPhone}
+            selectedCustomer={selectedCustomer}
+            onClearCustomer={() => {
+              setCustomerPhone("")
+              setSelectedCustomer(null)
+            }}
+            searchingCustomer={searchingCustomer}
+          />
+        </aside>
+
+        {/* Columna 3: Carrito — solo escritorio */}
+        <aside className="hidden lg:block lg:sticky lg:top-4 space-y-4">
+          <VentasCartPanel
+            variant="sidebar"
+            cartItems={cartItems}
+            totalFinal={totalFinal}
+            hasIncompleteStock={hasIncompleteStock}
+            onUpdateQty={updateQty}
+            onClearCart={() => setCart({})}
+            onCheckout={openModal}
+          />
+        </aside>
       </main>
 
-      {/* BARRA DE COBRO FIJA (STICKY BOTTOM BAR) */}
+      {/* FAB móvil: total + Cobrar */}
       <AnimatePresence>
         {cartItems.length > 0 && (
-          <motion.div 
+          <motion.div
             initial={{ y: 100 }}
             animate={{ y: 0 }}
             exit={{ y: 100 }}
-            className="fixed bottom-16 left-0 right-0 z-30 px-3 pb-3"
+            className="fixed bottom-16 left-0 right-0 z-30 px-3 pb-3 lg:hidden"
           >
-            <div className="bg-blue-600 rounded-2xl shadow-2xl flex items-center justify-between p-4 border border-white/10 gap-4">
+            <div className="bg-[var(--primary)] rounded-2xl shadow-2xl flex items-center justify-between p-4 border border-white/10 gap-4">
               <div className="flex-1">
-                <p className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-0.5">Total a Pagar</p>
-                <p className="text-2xl font-black text-white tabular-nums">${totalFinal.toFixed(2)}</p>
+                <p className="text-[9px] font-black text-blue-200 uppercase tracking-[0.2em] mb-0.5">
+                  Total a pagar
+                </p>
+                <p className="text-2xl font-black text-white tabular-nums">
+                  ${totalFinal.toFixed(2)}
+                </p>
               </div>
-
               <div className="flex flex-col items-end gap-1">
-                 {hasIncompleteStock && (
-                   <p className="text-[10px] font-bold text-amber-300 uppercase animate-pulse">Revisar Stock</p>
-                 )}
-                 <Button 
-                   onClick={openModal} 
-                   disabled={hasIncompleteStock}
-                   className={`h-12 px-8 text-base font-black rounded-xl transition-all shadow-xl ${hasIncompleteStock ? 'bg-gray-600' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-700/30'}`}
-                 >
-                   Cobrar
-                 </Button>
+                {hasIncompleteStock && (
+                  <p className="text-[10px] font-bold text-amber-300 uppercase animate-pulse">
+                    Revisar stock
+                  </p>
+                )}
+                <Button
+                  onClick={openModal}
+                  disabled={hasIncompleteStock}
+                  className={`h-12 px-8 text-base font-black rounded-xl transition-all shadow-xl ${
+                    hasIncompleteStock
+                      ? "bg-gray-600"
+                      : "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-700/30"
+                  }`}
+                >
+                  Cobrar
+                </Button>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ============ CHECKOUT MODAL ============ */}
-      <AnimatePresence>
-        {showModal && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center" 
-            onClick={closeModal}
-          >
-            <motion.div 
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[88vh]"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="overflow-y-auto flex-1">
-                {step !== "SUCCESS" && (
-                  <>
-                    <div className="bg-blue-600 px-6 pt-6 pb-8 relative">
-                      <button onClick={closeModal} disabled={checkingOut}
-                        className="absolute top-4 right-4 h-8 w-8 flex items-center justify-center rounded-full bg-white/20 text-white">
-                        <X className="h-4 w-4" />
-                      </button>
-                      <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-1">Registrar Venta</p>
-                      <p className="text-white text-5xl font-black">${totalFinal.toFixed(2)}</p>
-                      {totalDiscount > 0 && (
-                        <p className="text-indigo-300 text-xs mt-1 line-through">Subtotal: ${total.toFixed(2)}</p>
-                      )}
-                      <p className="text-indigo-300 text-[10px] mt-1 uppercase tracking-widest font-bold">
-                        {cartItems.reduce((s, i) => s + i.qty, 0)} litros · {pointsToEarn} PUNTOS GANADOS
-                      </p>
-                    </div>
-
-                    <div className="px-5 py-5 space-y-4 -mt-4 bg-white rounded-t-3xl relative pb-28">
-                      {/* LEALTAD EN CHECKOUT */}
-                      {selectedCustomer && (selectedCustomer.points > 0 || pointsToEarn > 0) && (
-                        <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 flex items-center justify-center bg-indigo-600 rounded-full shadow-lg shadow-indigo-600/30">
-                              <Star className="h-5 w-5 text-white fill-white" />
-                            </div>
-                            <div>
-                               <p className="text-xs font-black text-indigo-900 uppercase leading-none mb-1">Puntos de {selectedCustomer.name.split(' ')[0]}</p>
-                               <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Saldo: {selectedCustomer.points || 0} pts (${totalPotentialDiscount.toFixed(2)})</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={() => setRedeemPoints(!redeemPoints)}
-                            disabled={selectedCustomer.points <= 0}
-                            className={`px-3 py-1.5 rounded-full text-[10px] font-black transition-all ${redeemPoints ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-blue-600 border border-blue-100 active:bg-blue-50'} disabled:opacity-50`}
-                          >
-                            {redeemPoints ? ' CANJEADO' : ' CANJEAR'}
-                          </button>
-                        </div>
-                      )}
-                      {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm font-medium flex justify-between">
-                          {error}
-                          <button onClick={() => setError(null)}><X className="h-4 w-4" /></button>
-                        </div>
-                      )}
-
-                      <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Método de Pago</p>
-
-                      <div className="space-y-2">
-                        <button onClick={() => setMethod("EFECTIVO")}
-                          className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${method === "EFECTIVO" ? "border-emerald-500 bg-emerald-50" : "border-gray-100 bg-gray-50 hover:border-gray-200"}`}>
-                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${method === "EFECTIVO" ? "bg-emerald-500" : "bg-gray-200"}`}>
-                            <Banknote className={`h-5 w-5 ${method === "EFECTIVO" ? "text-white" : "text-gray-500"}`} />
-                          </div>
-                          <div className="flex-1 text-left">
-                            <p className={`font-bold text-base ${method === "EFECTIVO" ? "text-emerald-800" : "text-gray-700"}`}>Efectivo</p>
-                            {method === "EFECTIVO" && (
-                              <p className="text-xs text-emerald-600 font-medium">Ingresa el monto recibido</p>
-                            )}
-                          </div>
-                          {method === "EFECTIVO" && <ChevronRight className="h-5 w-5 text-emerald-500" />}
-                        </button>
-
-                        {method === "EFECTIVO" && (
-                          <div className="px-1 space-y-2">
-                            <div className="relative">
-                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-gray-400">$</span>
-                              <input type="number" step="0.01" min={totalFinal} value={cashInput}
-                                onChange={e => setCashInput(e.target.value)}
-                                placeholder={totalFinal.toFixed(2)}
-                                className="w-full h-14 pl-10 pr-4 text-2xl font-black rounded-xl border-2 border-emerald-300 focus:border-emerald-500 focus:outline-none bg-white text-[#1a1a1a] placeholder:text-gray-400"
-                              />
-                            </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              {[{ label: "Exacto", val: totalFinal }, { label: "$100", val: 100 }, { label: "$200", val: 200 }].map(btn => (
-                                <button key={btn.label} onClick={() => setCashInput(btn.val.toFixed(2))}
-                                  className="py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-sm hover:bg-emerald-100 transition-colors">
-                                  {btn.label}
-                                </button>
-                              ))}
-                            </div>
-                            {cashPaid > 0 && cashPaid >= totalFinal && (
-                              <div className="flex justify-between px-2 py-1">
-                                <span className="text-sm font-medium text-gray-500">Cambio a entregar</span>
-                                <span className="text-lg font-black text-blue-700">${change.toFixed(2)}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        <button onClick={() => setMethod("TARJETA")}
-                          className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${method === "TARJETA" ? "border-indigo-500 bg-indigo-50" : "border-gray-100 bg-gray-50 hover:border-gray-200"}`}>
-                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${method === "TARJETA" ? "bg-indigo-500" : "bg-gray-200"}`}>
-                            <CreditCard className={`h-5 w-5 ${method === "TARJETA" ? "text-white" : "text-gray-500"}`} />
-                          </div>
-                          <p className={`font-bold text-base ${method === "TARJETA" ? "text-blue-800" : "text-gray-700"}`}>Tarjeta Crédito / Débito</p>
-                        </button>
-
-                        <button onClick={() => setMethod("TRANSFERENCIA")}
-                          className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${method === "TRANSFERENCIA" ? "border-purple-500 bg-purple-50" : "border-gray-100 bg-gray-50 hover:border-gray-200"}`}>
-                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${method === "TRANSFERENCIA" ? "bg-purple-500" : "bg-gray-200"}`}>
-                            <ArrowRightLeft className={`h-5 w-5 ${method === "TRANSFERENCIA" ? "text-white" : "text-gray-500"}`} />
-                          </div>
-                          <p className={`font-bold text-base ${method === "TRANSFERENCIA" ? "text-purple-800" : "text-gray-700"}`}>Transferencia Bancaria</p>
-                        </button>
-                      </div>
-
-                      <Button onClick={handleConfirmPayment} disabled={checkingOut || (method === "EFECTIVO" && cashPaid < totalFinal)}
-                        className="w-full h-14 text-lg font-black rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 mt-2">
-                        {checkingOut ? "Procesando..." : "Confirmar Pago"}
-                      </Button>
-                    </div>
-                  </>
-                )}
-
-                {step === "SUCCESS" && successData && (
-                  <div className="px-6 py-6 pb-[140px] flex flex-col items-center text-center relative">
-                    <button onClick={closeModal}
-                      className="absolute top-4 right-4 h-8 w-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600">
-                      <X className="h-4 w-4" />
-                    </button>
-                    <div className="h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center mb-5">
-                      <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-                    </div>
-                    <h2 className="text-3xl font-black text-gray-900 mb-1">¡Listo!</h2>
-                    <p className="text-gray-500 text-sm mb-6">Venta registrada correctamente</p>
-
-                    <div className="w-full bg-gray-50 rounded-2xl p-5 space-y-3 text-left">
-                      {successData.totalOriginal != null && successData.totalOriginal > successData.total && (
-                        <>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-500 font-medium">Subtotal</span>
-                            <span className="font-bold text-gray-700 line-through">${successData.totalOriginal.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-emerald-600 font-bold flex items-center gap-1">
-                              <Star className="h-4 w-4 fill-current" /> Descuento por puntos ({successData.pointsRedeemed ?? 0} pts = ${successData.discountAmount?.toFixed(2) ?? "0.00"})
-                            </span>
-                            <span className="font-bold text-emerald-600">-${successData.discountAmount?.toFixed(2) ?? "0.00"}</span>
-                          </div>
-                        </>
-                      )}
-                      <div className="flex justify-between items-center border-t border-gray-200 pt-3">
-                        <span className="text-gray-500 font-medium">Total cobrado</span>
-                        <span className="text-2xl font-black text-gray-900">${successData.total.toFixed(2)}</span>
-                      </div>
-                      {method === "EFECTIVO" && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500 font-medium">Cambio a entregar</span>
-                          <span className="text-xl font-black text-indigo-600">${successData.change.toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500 font-medium">Método</span>
-                        <span className="font-bold text-gray-700">{method}</span>
-                      </div>
-                      {successData.pointsEarned != null && successData.pointsEarned > 0 && (
-                        <div className="flex justify-between items-center border-t border-indigo-100 pt-3">
-                          <span className="text-blue-600 font-bold text-sm">Puntos ganados</span>
-                          <span className="font-black text-blue-600">+{successData.pointsEarned} pts</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {(() => {
-                      const phone = (successData.customerPhone || "").replace(/\D/g, "")
-                      const hasPhone = phone.length >= 10
-                      const waNum = phone.length === 10 ? `52${phone}` : phone.length === 12 && phone.startsWith("52") ? phone : phone.length >= 10 ? `52${phone.slice(-10)}` : ""
-                      const ticketLines = [
-                        "🏪 *RAGO - Ticket de Venta*",
-                        "",
-                        "📦 *Productos:*",
-                        ...(successData.items || []).map((i: CartItem) => `• ${i.name}: ${i.quantity}L × $${i.pricePerLiter.toFixed(2)} = $${(i.quantity * i.pricePerLiter).toFixed(2)}`),
-                        "",
-                        successData.totalOriginal != null && successData.totalOriginal > successData.total
-                          ? `Subtotal: $${successData.totalOriginal.toFixed(2)}\nDescuento (puntos): -$${successData.discountAmount?.toFixed(2) ?? "0.00"}`
-                          : "",
-                        `*Total: $${successData.total.toFixed(2)}*`,
-                        "",
-                        `💵 Método: ${method}`,
-                        method === "EFECTIVO" ? `🔄 Cambio: $${successData.change.toFixed(2)}` : "",
-                        successData.pointsEarned ? `⭐ Puntos ganados: ${successData.pointsEarned}` : "",
-                        "",
-                        "Gracias por tu compra 🙏"
-                      ].filter(Boolean)
-                      const waText = encodeURIComponent(ticketLines.join("\n"))
-                      const waUrl = hasPhone && waNum ? `https://wa.me/${waNum}?text=${waText}` : null
-                      return waUrl ? (
-                        <a href={waUrl} target="_blank" rel="noopener noreferrer"
-                          className="w-full mt-4 h-14 flex items-center justify-center gap-2 rounded-2xl border-2 border-emerald-500 text-emerald-600 font-black bg-white hover:bg-emerald-50 transition-colors">
-                          <Send className="h-5 w-5" />
-                          Enviar ticket por WhatsApp
-                        </a>
-                      ) : null
-                    })()}
-
-                    <Button onClick={closeModal} className="w-full h-14 mt-4 text-base font-black rounded-2xl bg-blue-600 hover:bg-blue-700 text-white">
-                      Nueva Venta
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <VentasCheckoutModal
+        open={showModal}
+        onClose={closeModal}
+        step={step}
+        method={method}
+        setMethod={setMethod}
+        cashInput={cashInput}
+        setCashInput={setCashInput}
+        totalFinal={totalFinal}
+        total={total}
+        totalDiscount={totalDiscount}
+        change={change}
+        cashPaid={cashPaid}
+        checkingOut={checkingOut}
+        error={error}
+        setError={setError}
+        selectedCustomer={selectedCustomer}
+        redeemPoints={redeemPoints}
+        setRedeemPoints={setRedeemPoints}
+        totalPotentialDiscount={totalPotentialDiscount}
+        pointsToEarn={pointsToEarn}
+        cartItemsCount={cartCount}
+        successData={successData}
+        onConfirmPayment={handleConfirmPayment}
+      />
     </div>
   )
 }

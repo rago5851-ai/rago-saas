@@ -5,92 +5,71 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 
+const links = [
+  { href: "/inventory", label: "Materia Prima", sub: "Bodega e insumos", Icon: Package, color: "blue" },
+  { href: "/formulas", label: "Fórmulas", sub: "Biblioteca de recetas", Icon: FlaskConical, color: "amber" },
+  { href: "/production", label: "Producto Terminado", sub: "Stock listo para venta", Icon: ClipboardCheck, color: "emerald" },
+] as const
+
+const colorMap = {
+  blue: { bg: "bg-blue-500/10", icon: "text-blue-600", hover: "hover:border-blue-300" },
+  amber: { bg: "bg-amber-500/10", icon: "text-amber-600", hover: "hover:border-amber-300" },
+  emerald: { bg: "bg-emerald-500/10", icon: "text-emerald-600", hover: "hover:border-emerald-300" },
+}
+
 export default function FabricacionPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-30 bg-blue-600 px-6 pt-12 pb-6 shadow-lg rounded-b-[2rem]">
-        <div className="flex items-center gap-4 max-w-lg mx-auto w-full">
-          <Link href="/" className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center shrink-0">
-            <ArrowLeft className="h-5 w-5 text-white" />
+    <div className="flex flex-col min-h-screen">
+      <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-4 lg:px-8 lg:py-5 shadow-sm">
+        <div className="flex items-center gap-4 max-w-5xl mx-auto">
+          <Link href="/" className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 hover:bg-slate-200 transition-colors">
+            <ArrowLeft className="h-5 w-5 text-slate-600" />
           </Link>
-          <div className="text-white">
-            <h1 className="text-xl font-black tracking-tight">Fabricación</h1>
-            <p className="text-blue-100/90 text-[10px] font-bold uppercase tracking-widest">Gestión de Producción</p>
+          <div>
+            <h1 className="text-xl font-bold text-slate-800 tracking-tight">Fabricación</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Gestión de producción</p>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 p-5 space-y-6 max-w-lg mx-auto w-full pb-28">
-        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-xl shadow-blue-900/5 space-y-6">
-          <div className="space-y-1">
-            <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest px-1">Centro de Control</h2>
-            <div className="h-1 w-10 bg-blue-600 rounded-full ml-1"></div>
+      <main className="flex-1 p-5 pb-24 lg:p-8 lg:pb-8 max-w-5xl mx-auto w-full space-y-8">
+        <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 lg:p-8">
+          <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-6">Centro de control</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {links.map(({ href, label, sub, Icon, color }) => {
+              const c = colorMap[color]
+              return (
+                <Link key={href} href={href}>
+                  <motion.div
+                    whileTap={{ scale: 0.98 }}
+                    className={`w-full bg-slate-50 p-5 rounded-2xl border-2 border-transparent ${c.hover} transition-all group flex items-center gap-4`}
+                  >
+                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${c.bg}`}>
+                      <Icon className={`h-6 w-6 ${c.icon}`} />
+                    </div>
+                    <div className="text-left min-w-0">
+                      <p className="font-bold text-slate-800 text-base">{label}</p>
+                      <p className="text-xs font-medium text-slate-500">{sub}</p>
+                    </div>
+                  </motion.div>
+                </Link>
+              )
+            })}
           </div>
-          
-          <div className="grid grid-cols-1 gap-4">
-            {/* Materia Prima */}
-            <Link href="/inventory">
-              <motion.button 
-                whileTap={{ scale: 0.98 }}
-                className="w-full bg-gray-50 p-5 rounded-2xl border-2 border-transparent hover:border-blue-600 hover:bg-white transition-all group flex items-center gap-5 shadow-sm"
-              >
-                <div className="bg-blue-100 p-3.5 rounded-2xl group-hover:bg-blue-600 transition-colors duration-300">
-                  <Package className="h-7 w-7 text-blue-600 group-hover:text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="font-black text-gray-900 text-lg">Materia Prima</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Bodega e Insumos</p>
-                </div>
-              </motion.button>
-            </Link>
+        </section>
 
-            {/* Fórmulas */}
-            <Link href="/formulas">
-              <motion.button 
-                whileTap={{ scale: 0.98 }}
-                className="w-full bg-gray-50 p-5 rounded-2xl border-2 border-transparent hover:border-blue-600 hover:bg-white transition-all group flex items-center gap-5 shadow-sm"
-              >
-                <div className="bg-amber-100 p-3.5 rounded-2xl group-hover:bg-amber-500 transition-colors duration-300">
-                  <FlaskConical className="h-7 w-7 text-amber-600 group-hover:text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="font-black text-gray-900 text-lg">Fórmulas</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Biblioteca de Recetas</p>
-                </div>
-              </motion.button>
-            </Link>
-
-            {/* Producto Terminado */}
-            <Link href="/production">
-              <motion.button 
-                whileTap={{ scale: 0.98 }}
-                className="w-full bg-gray-50 p-5 rounded-2xl border-2 border-transparent hover:border-blue-600 hover:bg-white transition-all group flex items-center gap-5 shadow-sm"
-              >
-                <div className="bg-emerald-100 p-3.5 rounded-2xl group-hover:bg-emerald-500 transition-colors duration-300">
-                  <ClipboardCheck className="h-7 w-7 text-emerald-600 group-hover:text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="font-black text-gray-900 text-lg">Producto Terminado</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Stock Listo para Venta</p>
-                </div>
-              </motion.button>
-            </Link>
-          </div>
-        </div>
-
-        {/* Info card o atajo rápido */}
-        <div className="bg-blue-700 rounded-[2rem] p-6 text-white relative overflow-hidden shadow-2xl">
+        <section className="bg-slate-800 rounded-2xl p-6 lg:p-8 text-white relative overflow-hidden">
           <div className="relative z-10">
-            <p className="text-blue-100 text-[10px] font-black uppercase tracking-widest mb-1">Acceso Rápido</p>
-            <h3 className="text-lg font-black mb-4">¿Preparar un nuevo lote?</h3>
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Acceso rápido</p>
+            <h3 className="text-lg font-bold mb-4">¿Preparar un nuevo lote?</h3>
             <Link href="/production/new">
-              <Button className="bg-white text-blue-700 hover:bg-blue-50 font-black rounded-xl">
-                Iniciar Producción
+              <Button className="bg-white text-slate-800 hover:bg-slate-100 font-bold rounded-xl h-12 px-6">
+                Iniciar producción
               </Button>
             </Link>
           </div>
-          <Factory className="absolute -bottom-4 -right-4 h-32 w-32 text-white/10 rotate-12" />
-        </div>
+          <Factory className="absolute -bottom-4 -right-4 h-32 w-32 text-white/5" />
+        </section>
       </main>
     </div>
   )

@@ -88,6 +88,48 @@ export async function updateRawMaterialStock(id: string, newStock: number) {
   }
 }
 
+export async function addRawMaterialStock(rawMaterialId: string, quantityToAdd: number) {
+  try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    const docRef = db.collection("rawMaterials").doc(rawMaterialId)
+    const doc = await docRef.get()
+    if (!doc.exists || (doc.data() as any)?.userId !== userId) {
+      return { success: false, error: "No tienes permiso para surtir este insumo" }
+    }
+
+    const data = doc.data() as any
+    const currentStock = Number(data?.stockKg) ?? 0
+    const pricePerKg = Number(data?.pricePerKg) ?? 0
+    const rawMaterialName = String(data?.name ?? "")
+    const qty = Math.round(Number(quantityToAdd) * 1000) / 1000
+    if (qty <= 0) return { success: false, error: "La cantidad debe ser mayor a 0" }
+
+    const newStockKg = Math.round((currentStock + qty) * 1000) / 1000
+    const totalCost = Math.round(qty * pricePerKg * 100) / 100
+
+    await docRef.update({ stockKg: newStockKg, updatedAt: new Date() })
+
+    await db.collection("materiaPrimaMovements").add({
+      userId,
+      rawMaterialId,
+      rawMaterialName,
+      quantityKg: qty,
+      unitPrice: pricePerKg,
+      totalCost,
+      createdAt: new Date(),
+    })
+
+    revalidatePath("/inventory")
+    revalidatePath("/reportes/utilidades")
+    return { success: true }
+  } catch (error: any) {
+    console.error("Error addRawMaterialStock:", error?.message || error)
+    return { success: false, error: "No se pudo agregar stock al insumo" }
+  }
+}
+
 export async function deleteRawMaterial(id: string) {
   try {
     const userId = await getUserId()

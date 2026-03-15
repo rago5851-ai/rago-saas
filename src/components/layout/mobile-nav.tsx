@@ -2,18 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Package, Beaker, ClipboardList, ShoppingBag, Home } from "lucide-react";
+import { Package, Beaker, ClipboardList, ShoppingBag, Home, PackageOpen } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Inicio", Icon: Home },
   { href: "/ventas", label: "Ventas", Icon: ShoppingBag },
+  { href: "/productos", label: "Productos", Icon: PackageOpen },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 z-50 w-full border-t border-gray-200 bg-white pb-safe">
+    <nav className="fixed bottom-0 z-50 w-full border-t border-gray-200 bg-white pb-safe lg:hidden">
       <div className="mx-auto flex h-16 max-w-md items-center justify-around px-1">
         {navItems.map(({ href, label, Icon }) => {
           const active = pathname === href || (href !== "/" && pathname.startsWith(href));

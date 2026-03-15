@@ -4,6 +4,55 @@ import { cookies } from "next/headers"
 import { db, auth } from "@/lib/firebase"
 import { redirect } from "next/navigation"
 
+/** Inicio de sesión / registro con Google: recibe el idToken del cliente y crea la sesión. */
+export async function loginWithGoogleAction(idToken: string) {
+  if (!idToken?.trim()) return { success: false, error: "Token inválido" }
+
+  if (!auth) {
+    console.error("[AUTH] Firebase Auth no disponible en loginWithGoogleAction")
+    return { success: false, error: "El servicio de autenticación no está disponible." }
+  }
+
+  try {
+    const decodedToken = await auth.verifyIdToken(idToken)
+    const uid = decodedToken.uid
+    const email = decodedToken.email ?? ""
+
+    const userDoc = await db.collection("users").doc(uid).get()
+
+    if (userDoc.exists) {
+      const userData = userDoc.data()
+      if (userData?.isActive === false) {
+        return { success: false, error: "Tu cuenta ha sido desactivada. Contacta soporte." }
+      }
+    } else {
+      await db.collection("users").doc(uid).set({
+        email,
+        role: "CUSTOMER",
+        isActive: true,
+        createdAt: new Date(),
+      })
+    }
+
+    const expiresIn = 60 * 60 * 24 * 5 * 1000
+    const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn })
+
+    const cookieStore = await cookies()
+    cookieStore.set("auth_token", sessionCookie, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: expiresIn / 1000,
+      path: "/",
+      sameSite: "lax",
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error("[AUTH] loginWithGoogleAction error:", error)
+    return { success: false, error: "No se pudo verificar la sesión de Google. Intenta de nuevo." }
+  }
+}
+
 export async function loginAction(formData: FormData) {
   const email = formData.get("email")?.toString()
   const password = formData.get("password")?.toString()

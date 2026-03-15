@@ -5,7 +5,7 @@ import { getUserId } from "@/lib/auth-utils"
 import { getMeridaDayRange } from "@/lib/date-utils"
 import { serializeDoc, sanitizeResponse } from "@/lib/firestore-utils"
 import { revalidatePath } from "next/cache"
-import { subDays, startOfMonth, format, parseISO } from "date-fns"
+import { subDays, startOfMonth, endOfMonth, format, parseISO } from "date-fns"
 import { toZonedTime } from "date-fns-tz"
 
 const TIMEZONE = "America/Merida"
@@ -202,5 +202,186 @@ export async function maintenanceCleanup() {
   } catch (error) {
     console.error("Cleanup error:", error)
     return { success: false, error: "Error en mantenimiento" }
+  }
+}
+
+// --- Utilidades (ventas del mes vs gastos manuales) ---
+
+export type OtroGasto = { concepto: string; monto: number }
+
+export type UtilidadesGastos = {
+  materiaPrima: number
+  comprasProductos: number
+  nomina: number
+  renta: number
+  otrosGastos: OtroGasto[]
+}
+
+export async function getVentasDelMes(yearMonth: string) {
+  try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    const [y, m] = yearMonth.split("-").map(Number)
+    if (!y || !m) return { success: false, error: "Formato de mes inválido (YYYY-MM)" }
+
+    const firstDay = parseISO(`${yearMonth}-01`)
+    const start = startOfMonth(firstDay)
+    const end = endOfMonth(firstDay)
+
+    const snapshot = await db.collection("salesHistory")
+      .where("userId", "==", userId)
+      .get()
+
+    let total = 0
+    snapshot.docs.forEach(doc => {
+      const data = doc.data()
+      const createdAt = data.createdAt?.toDate?.() ?? (data.createdAt as any)
+      const date = createdAt instanceof Date ? createdAt : new Date(createdAt)
+      if (date >= start && date <= end) {
+        total += Number(data.total) || 0
+      }
+    })
+
+    return sanitizeResponse({ success: true, data: { totalVentas: total } })
+  } catch (error) {
+    console.error("Error getVentasDelMes:", error)
+    return { success: false, error: "No se pudo obtener ventas del mes" }
+  }
+}
+
+export async function getTotalComprasProductosMes(yearMonth: string) {
+  try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    const [y, m] = yearMonth.split("-").map(Number)
+    if (!y || !m) return { success: false, error: "Formato de mes inválido (YYYY-MM)" }
+
+    const firstDay = parseISO(`${yearMonth}-01`)
+    const start = startOfMonth(firstDay)
+    const end = endOfMonth(firstDay)
+
+    const snapshot = await db.collection("productRestocks")
+      .where("userId", "==", userId)
+      .get()
+
+    let total = 0
+    snapshot.docs.forEach(doc => {
+      const data = doc.data()
+      const createdAt = data.createdAt?.toDate?.() ?? (data.createdAt as any)
+      const date = createdAt instanceof Date ? createdAt : new Date(createdAt)
+      if (date >= start && date <= end) {
+        total += Number(data.totalCost) || 0
+      }
+    })
+
+    return sanitizeResponse({ success: true, data: total })
+  } catch (error) {
+    console.error("Error getTotalComprasProductosMes:", error)
+    return { success: false, error: "No se pudo obtener compras en productos" }
+  }
+}
+
+export async function getTotalMateriaPrimaMes(yearMonth: string) {
+  try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    const [y, m] = yearMonth.split("-").map(Number)
+    if (!y || !m) return { success: false, error: "Formato de mes inválido (YYYY-MM)" }
+
+    const firstDay = parseISO(`${yearMonth}-01`)
+    const start = startOfMonth(firstDay)
+    const end = endOfMonth(firstDay)
+
+    const snapshot = await db.collection("materiaPrimaMovements")
+      .where("userId", "==", userId)
+      .get()
+
+    let total = 0
+    snapshot.docs.forEach(doc => {
+      const data = doc.data()
+      const createdAt = data.createdAt?.toDate?.() ?? (data.createdAt as any)
+      const date = createdAt instanceof Date ? createdAt : new Date(createdAt)
+      if (date >= start && date <= end) {
+        total += Number(data.totalCost) || 0
+      }
+    })
+
+    return sanitizeResponse({ success: true, data: total })
+  } catch (error) {
+    console.error("Error getTotalMateriaPrimaMes:", error)
+    return { success: false, error: "No se pudo obtener inversión en materia prima" }
+  }
+}
+
+export async function getUtilidadesMes(yearMonth: string) {
+  try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    const docId = `${userId}_${yearMonth}`
+    const doc = await db.collection("utilidades").doc(docId).get()
+
+    if (!doc.exists) {
+      return sanitizeResponse({
+        success: true,
+        data: {
+          materiaPrima: 0,
+          comprasProductos: 0,
+          nomina: 0,
+          renta: 0,
+          otrosGastos: [],
+        } as UtilidadesGastos,
+      })
+    }
+
+    const d = doc.data() as any
+    const otrosGastos = Array.isArray(d?.otrosGastos) ? d.otrosGastos : []
+    return sanitizeResponse({
+      success: true,
+      data: {
+        materiaPrima: Number(d?.materiaPrima) || 0,
+        comprasProductos: Number(d?.comprasProductos) || 0,
+        nomina: Number(d?.nomina) || 0,
+        renta: Number(d?.renta) || 0,
+        otrosGastos: otrosGastos.map((o: any) => ({
+          concepto: String(o?.concepto ?? ""),
+          monto: Number(o?.monto) ?? 0,
+        })),
+      } as UtilidadesGastos,
+    })
+  } catch (error) {
+    console.error("Error getUtilidadesMes:", error)
+    return { success: false, error: "No se pudieron cargar los gastos" }
+  }
+}
+
+export async function saveUtilidadesMes(yearMonth: string, data: UtilidadesGastos) {
+  try {
+    const userId = await getUserId()
+    if (!userId) return { success: false, error: "No autorizado" }
+
+    const docId = `${userId}_${yearMonth}`
+    const payload = {
+      userId,
+      yearMonth,
+      materiaPrima: Number(data.materiaPrima) || 0,
+      comprasProductos: Number(data.comprasProductos) || 0,
+      nomina: Number(data.nomina) || 0,
+      renta: Number(data.renta) || 0,
+      otrosGastos: Array.isArray(data.otrosGastos)
+        ? data.otrosGastos.map(o => ({ concepto: String(o.concepto || ""), monto: Number(o.monto) || 0 }))
+        : [],
+      updatedAt: new Date(),
+    }
+
+    await db.collection("utilidades").doc(docId).set(payload, { merge: true })
+    revalidatePath("/reportes/utilidades")
+    return { success: true }
+  } catch (error) {
+    console.error("Error saveUtilidadesMes:", error)
+    return { success: false, error: "No se pudieron guardar los gastos" }
   }
 }
