@@ -80,15 +80,16 @@ export default function ClientesPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-10 bg-white border-b px-4 py-4 shadow-sm flex items-center gap-3">
-        <Link href="/" className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-          <ArrowLeft className="h-5 w-5 text-gray-600" />
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-xl font-black text-gray-900 tracking-tight">Clientes</h1>
-          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Gestión de Lealtad</p>
-        </div>
+    <div className="flex flex-col min-h-screen">
+      <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-4 lg:px-8 lg:py-5 shadow-sm">
+        <div className="flex items-center gap-4 max-w-5xl mx-auto">
+          <Link href="/" className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 hover:bg-slate-200 transition-colors">
+            <ArrowLeft className="h-5 w-5 text-slate-600" />
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-slate-800 tracking-tight">Clientes</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Gestión de lealtad</p>
+          </div>
         <div className="flex items-center gap-2">
           {/* BOTÓN DE CONFIGURACIÓN DE LEALTAD */}
           <Button 
@@ -130,66 +131,68 @@ export default function ClientesPage() {
             <UserPlus className="h-5 w-5 text-white" />
           </Button>
         </div>
+        </div>
       </header>
 
-      <main className="flex-1 p-4 space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input 
-            type="text"
-            placeholder="Buscar por nombre o teléfono..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-12 pl-11 pr-4 rounded-xl border border-gray-200 focus:border-[#2563eb] focus:ring-0 focus:outline-none bg-white text-sm"
-          />
-        </div>
+      <main className="flex-1 p-4 lg:p-6">
+        <div className="max-w-5xl mx-auto space-y-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input 
+              type="text"
+              placeholder="Buscar por nombre o teléfono..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-12 pl-11 pr-4 rounded-xl border border-slate-200/80 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none bg-white text-sm transition-colors"
+            />
+          </div>
 
-        <AnimatePresence mode="wait">
-          {loading ? (
-            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 w-full rounded-2xl" />)}
-            </motion.div>
-          ) : (
-            <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-              {clients.length === 0 ? (
-                <div className="py-20 text-center space-y-2">
-                  <div className="inline-flex h-16 w-16 bg-gray-100 rounded-full items-center justify-center mb-2">
-                    <User className="h-8 w-8 text-gray-300" />
+          <AnimatePresence mode="wait">
+            {loading ? (
+              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
+                {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 w-full rounded-2xl" />)}
+              </motion.div>
+            ) : (
+              <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+                {clients.length === 0 ? (
+                  <div className="py-20 text-center space-y-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
+                    <div className="inline-flex h-16 w-16 bg-slate-100 rounded-2xl items-center justify-center mb-2">
+                      <User className="h-8 w-8 text-slate-400" />
+                    </div>
+                    <p className="text-slate-600 font-medium">No se encontraron clientes</p>
+                    <Button variant="link" onClick={() => setShowModal(true)} className="text-blue-600 font-bold">Registrar el primero</Button>
                   </div>
-                  <p className="text-gray-500 font-medium">No se encontraron clientes</p>
-                  <Button variant="link" onClick={() => setShowModal(true)} className="text-[#2563eb] font-bold">Registrar el primero</Button>
-                </div>
-              ) : (
-                clients.map(client => (
-                  <motion.div 
-                    layout
-                    key={client.id}
-                    className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4"
-                  >
-                    <div className="h-12 w-12 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
-                      <User className="h-6 w-6 text-[#2563eb]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-gray-900 truncate">{client.name}</h3>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Phone className="h-3 w-3" />
-                        <span>{client.phone}</span>
+                ) : (
+                  clients.map(client => (
+                    <motion.div 
+                      layout
+                      key={client.id}
+                      className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="h-12 w-12 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
+                        <User className="h-6 w-6 text-blue-600" />
                       </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="flex items-center gap-1 justify-end">
-                        <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-                        <span className="text-sm font-black text-gray-900">{client.points || 0}</span>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-slate-800 truncate">{client.name}</h3>
+                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                          <Phone className="h-3 w-3" />
+                          <span>{client.phone}</span>
+                        </div>
                       </div>
-                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Puntos</p>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+                      <div className="text-right shrink-0">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                          <span className="text-sm font-bold text-slate-800">{client.points || 0}</span>
+                        </div>
+                        <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">Puntos</p>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </main>
 
       {/* Modal Registro */}
@@ -320,7 +323,7 @@ export default function ClientesPage() {
               <div className="bg-[#2563eb] p-6 flex flex-col items-center text-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
                 <div className="h-14 w-14 bg-white/20 rounded-2xl flex items-center justify-center mb-3 backdrop-blur-sm">
-                  <Settings className="h-7 v-7 text-white animate-[spin_10s_linear_infinite]" />
+                  <Settings className="h-7 w-7 text-white animate-[spin_10s_linear_infinite]" />
                 </div>
                 <h3 className="text-xl font-black text-white uppercase tracking-tight">Lealtad Rago</h3>
                 <p className="text-blue-100 text-[9px] font-black uppercase tracking-[0.2em] mt-1">Configuración del Sistema</p>
@@ -351,11 +354,11 @@ export default function ClientesPage() {
                           </div>
                         </div>
                         <div className="pt-5 hidden sm:block">
-                           <div className="text-indigo-300 font-black">=</div>
+                           <div className="text-blue-300 font-black">=</div>
                         </div>
                         <div className="flex-1">
                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1 mb-1">Obtiene:</p>
-                           <div className="h-11 flex items-center justify-center bg-white/60 rounded-xl border border-indigo-50 font-black text-[#2563eb] text-sm gap-1">
+                           <div className="h-11 flex items-center justify-center bg-white/60 rounded-xl border border-blue-100 font-black text-blue-600 text-sm gap-1">
                              1 <span className="text-[10px] opacity-60">PTO</span>
                            </div>
                         </div>

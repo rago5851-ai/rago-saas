@@ -80,24 +80,21 @@ export default function CajaPage() {
   ]
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b px-4 py-4 shadow-sm flex items-center gap-3">
-        <Link href="/" className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-          <ArrowLeft className="h-5 w-5 text-gray-600" />
-        </Link>
-        <motion.div 
-          className="flex-1"
-          initial={{ x: -10, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-        >
-          <h1 className="text-xl font-black text-gray-900 tracking-tight">Caja Actual</h1>
-          <p className="text-xs text-gray-500">Desde el último corte</p>
-        </motion.div>
-        <Wallet className="h-5 w-5 text-amber-500 shrink-0" />
+    <div className="flex flex-col min-h-screen">
+      <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-4 lg:px-8 lg:py-5 shadow-sm">
+        <div className="flex items-center gap-4 max-w-5xl mx-auto">
+          <Link href="/" className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 hover:bg-slate-200 transition-colors">
+            <ArrowLeft className="h-5 w-5 text-slate-600" />
+          </Link>
+          <div className="flex-1">
+            <h1 className="text-xl font-bold text-slate-800 tracking-tight">Caja actual</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Desde el último corte</p>
+          </div>
+          <Wallet className="h-5 w-5 text-amber-500 shrink-0" />
+        </div>
       </header>
 
-      <main className="flex-1 p-4 pb-32 space-y-4">
+      <main className="flex-1 p-5 pb-32 lg:p-8 lg:pb-8 max-w-5xl mx-auto w-full space-y-6">
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div 
@@ -118,20 +115,20 @@ export default function CajaPage() {
               transition={{ duration: 0.4 }}
               className="space-y-4"
             >
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50 overflow-hidden">
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm divide-y divide-slate-100 overflow-hidden">
                 {rows.map(({ label, icon: Icon, color, bg, value }) => (
-                  <div key={label} className="flex items-center gap-4 px-4 py-4">
-                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>
+                  <div key={label} className="flex items-center gap-4 px-5 py-4">
+                    <div className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>
                       <Icon className={`h-5 w-5 ${color}`} />
                     </div>
-                    <span className="flex-1 font-medium text-gray-700 text-sm">{label}</span>
-                    <span className={`text-lg font-black ${color}`}>${value.toFixed(2)}</span>
+                    <span className="flex-1 font-medium text-slate-700 text-sm">{label}</span>
+                    <span className={`text-lg font-bold ${color}`}>${value.toFixed(2)}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="bg-blue-600 rounded-2xl px-5 py-5 flex justify-between items-center shadow-md">
-                <span className="text-indigo-100 font-bold text-base">Total General</span>
+              <div className="bg-slate-800 rounded-2xl px-6 py-6 flex justify-between items-center shadow-lg">
+                <span className="text-slate-300 font-semibold text-base">Total general</span>
                 <span className="text-white text-3xl font-black">${caja?.total?.toFixed(2) ?? "0.00"}</span>
               </div>
 
@@ -145,9 +142,9 @@ export default function CajaPage() {
               )}
 
               <Button onClick={openModal}
-                className="w-full h-16 text-lg font-black rounded-2xl bg-amber-500 hover:bg-amber-600 text-white shadow-xl shadow-amber-500/30 flex items-center justify-center gap-3 mt-2">
-                <Scissors className="h-6 w-6" />
-                Hacer Corte de Caja
+                className="w-full h-14 lg:h-16 text-lg font-bold rounded-2xl bg-amber-500 hover:bg-amber-600 text-white shadow-lg flex items-center justify-center gap-3 mt-2">
+                <Scissors className="h-5 w-5 lg:h-6 lg:w-6" />
+                Hacer corte de caja
               </Button>
             </motion.div>
           )}
